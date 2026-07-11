@@ -1,5 +1,5 @@
 import type { AppData } from "./types";
-import { addMonthsToKey, addDaysToKey, enumerateDateKeys, todayKey, monthLabelFr } from "./dateUtils";
+import { addMonthsToKey, addDaysToKey, enumerateDateKeys, todayKey, monthShortLabel } from "./dateUtils";
 
 export type RangePreset = "month" | "3m" | "6m" | "9m" | "1y" | "all" | "previous";
 
@@ -133,5 +133,5 @@ export function monthBuckets(dates: string[]): MonthBucket[] {
   }
   return [...map.entries()]
     .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
-    .map(([key, ds]) => ({ key, label: monthLabelFr(ds[0]), dates: ds }));
+    .map(([key, ds]) => ({ key, label: monthShortLabel(ds[0]), dates: ds }));
 }

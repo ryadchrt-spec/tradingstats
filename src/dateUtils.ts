@@ -101,3 +101,10 @@ export function shortDateLabelFr(key: string): string {
   const short = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."];
   return `${d.getUTCDate()} ${short[d.getUTCMonth()]}`;
 }
+
+// Compact "MM/YY" form used on chart axes where space is tight but the year
+// still needs to be visible (e.g. comparing across year boundaries).
+export function monthShortLabel(key: string): string {
+  const d = parseDateKey(key);
+  return `${pad2(d.getUTCMonth() + 1)}/${String(d.getUTCFullYear()).slice(-2)}`;
+}
