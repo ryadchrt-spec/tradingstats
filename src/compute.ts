@@ -97,3 +97,18 @@ export function currentStreak(dayWins: (number | null)[], threshold = 0.5): numb
 export function daysTracked(dayWins: (number | null)[]): number {
   return dayWins.filter((v) => v !== null).length;
 }
+
+export interface DiffPair {
+  primary: number | null; // rounded percentage, 0-100
+  compareVal: number | null;
+  diffLabel: string;
+}
+
+// Turns two 0-1 ratios into rounded percentages plus a "+N%"/"-N%" delta label —
+// shared by every comparison-aware chart (habit bars, monthly bars).
+export function toDiffPair(primaryRatio: number | null, compareRatio: number | null): DiffPair {
+  const primary = primaryRatio === null ? null : Math.round(primaryRatio * 100);
+  const compareVal = compareRatio === null ? null : Math.round(compareRatio * 100);
+  const diff = primary !== null && compareVal !== null ? primary - compareVal : null;
+  return { primary, compareVal, diffLabel: diff === null ? "" : `${diff > 0 ? "+" : ""}${diff}%` };
+}

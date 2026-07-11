@@ -4,7 +4,7 @@ import { useStore } from "../store";
 import type { AppData } from "../types";
 import { DASHBOARD_HABITS, HEALTH_HABITS } from "../habits";
 import { shortDateLabelFr, todayKey, addDaysToKey } from "../dateUtils";
-import { average, dashboardDailyAverage, healthDayAverage, hasAnyDashboardData, currentStreak, daysTracked, scoreToNum } from "../compute";
+import { average, dashboardDailyAverage, healthDayAverage, hasAnyDashboardData, currentStreak, daysTracked, scoreToNum, toDiffPair, type DiffPair } from "../compute";
 import { useDarkMode } from "../useDarkMode";
 import { StatTile } from "./StatItem";
 import { ChartTooltip } from "./ChartTooltip";
@@ -47,19 +47,7 @@ function habitBreakdown(
   return { dashboardBars, healthBars };
 }
 
-interface CombinedBar {
-  name: string;
-  primary: number | null;
-  compareVal: number | null;
-  diffLabel: string;
-}
-
-function toCombinedBar(name: string, primaryRatio: number | null, compareRatio: number | null): CombinedBar {
-  const primary = primaryRatio === null ? null : Math.round(primaryRatio * 100);
-  const compareVal = compareRatio === null ? null : Math.round(compareRatio * 100);
-  const diff = primary !== null && compareVal !== null ? primary - compareVal : null;
-  return { name, primary, compareVal, diffLabel: diff === null ? "" : `${diff > 0 ? "+" : ""}${diff}%` };
-}
+type CombinedBar = DiffPair & { name: string };
 
 // Same category set as habitBreakdown, but keeps every habit that has data in
 // EITHER period (not just the primary one) so a comparison bar never goes missing,
@@ -82,7 +70,7 @@ function combinedHabitBreakdown(
       }))
       .filter((r) => r.primary !== null || r.compare !== null)
       .sort((a, b) => (b.primary ?? -1) - (a.primary ?? -1))
-      .map((r) => toCombinedBar(r.name, r.primary, r.compare));
+      .map((r) => ({ name: r.name, ...toDiffPair(r.primary, r.compare) }));
   }
 
   return {
@@ -329,7 +317,15 @@ export function StatsView({ year, month }: { year: number; month: number }) {
         </ResponsiveContainer>
       </div>
 
-      <MonthlyBreakdown primaryDates={primaryDates} primaryDailyAverages={primaryDailyAverages} data={data} dark={dark} />
+      <MonthlyBreakdown
+        primaryDates={primaryDates}
+        primaryDailyAverages={primaryDailyAverages}
+        compareDates={isComparing ? compareDates : []}
+        compareDailyAverages={compareDailyAverages}
+        data={data}
+        dark={dark}
+        compareLegend={compareLegend}
+      />
 
       <div className="grid md:grid-cols-2 gap-4">
         <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 p-4">
