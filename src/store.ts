@@ -83,12 +83,15 @@ export const useStore = create<Store>()(
       setCalorieValue: (date, key, value) =>
         set((state) => {
           const day = state.data.calories[date] ?? emptyCalorieDay(date);
+          // Lock the calorie goal in on first fill so later profile changes
+          // don't retroactively rewrite this day's "Objectif".
+          const calorieGoalAtEntry = day.calorieGoalAtEntry ?? state.data.profile.calorieGoal;
           return {
             data: {
               ...state.data,
               calories: {
                 ...state.data.calories,
-                [date]: { ...day, [key]: value },
+                [date]: { ...day, [key]: value, calorieGoalAtEntry },
               },
             },
           };

@@ -22,7 +22,7 @@ export function CaloriesTable({ year, month }: { year: number; month: number }) 
 
   const monthlyWeight = average(dates.map((d) => data.calories[d]?.weight ?? null));
   const monthlyTotals = average(dates.map((d) => totalCalories(data.calories[d])));
-  const monthlyTarget = average(dates.map((d) => calorieTarget(data.calories[d]?.weight ?? null, profile)));
+  const monthlyTarget = average(dates.map((d) => calorieTarget(data.calories[d], profile)));
   const monthlyDeficit = average(dates.map((d) => calorieDeficit(data.calories[d], profile)));
   const monthlyProtein = average(dates.map((d) => data.calories[d]?.protein ?? null));
   const monthlyProteinTarget = average(dates.map((d) => proteinTarget(data.calories[d]?.weight ?? null, profile)));
@@ -66,7 +66,7 @@ export function CaloriesTable({ year, month }: { year: number; month: number }) 
             const cal = data.calories[date];
             const today = isToday(date);
             const total = totalCalories(cal);
-            const objectif = calorieTarget(cal?.weight ?? null, profile);
+            const objectif = calorieTarget(cal, profile);
             const deficit = calorieDeficit(cal, profile);
             const objProt = proteinTarget(cal?.weight ?? null, profile);
             return (

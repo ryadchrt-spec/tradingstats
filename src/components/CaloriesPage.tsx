@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
 import { useStore } from "../store";
-import { todayKey, addDaysToKey, shortDateLabelFr } from "../dateUtils";
+import { shortDateLabelFr } from "../dateUtils";
 import { totalCalories, calorieTarget, calorieDeficit, proteinTarget, theoreticalKgChange, formatNum, formatSigned } from "../calorieCompute";
 import { useDarkMode } from "../useDarkMode";
 import { StatTile } from "./StatItem";
@@ -11,8 +11,6 @@ import { ProfileSettings } from "./ProfileSettings";
 import { CaloriesTable } from "./CaloriesTable";
 import { RANGE_PRESETS, resolveRange, rangeDates, chunkAverage, chunkDates, type RangePreset, type DateRange } from "../ranges";
 
-type PeriodSelection = RangePreset | "custom";
-
 export function CaloriesPage({ year, month }: { year: number; month: number }) {
   const data = useStore((s) => s.data);
   const dark = useDarkMode();
@@ -20,19 +18,12 @@ export function CaloriesPage({ year, month }: { year: number; month: number }) {
   const profile = data.profile;
 
   const [periodOpen, setPeriodOpen] = useState(false);
-  const [periodPreset, setPeriodPreset] = useState<PeriodSelection>("month");
-  const [customStart, setCustomStart] = useState<string>(() => addDaysToKey(todayKey(), -29));
-  const [customEnd, setCustomEnd] = useState<string>(() => todayKey());
+  const [periodPreset, setPeriodPreset] = useState<RangePreset>("month");
 
   const monthAnchor = { year, month };
-  const periodRange: DateRange = useMemo(() => {
-    if (periodPreset === "custom") {
-      return customStart <= customEnd ? { start: customStart, end: customEnd } : { start: customEnd, end: customStart };
-    }
-    return resolveRange(periodPreset, data, monthAnchor);
-  }, [periodPreset, data, year, month, customStart, customEnd]);
+  const periodRange: DateRange = useMemo(() => resolveRange(periodPreset, data, monthAnchor), [periodPreset, data, year, month]);
   const periodDates = useMemo(() => rangeDates(periodRange), [periodRange.start, periodRange.end]);
-  const periodLabel = periodPreset === "custom" ? "Personnalisé" : RANGE_PRESETS.find((p) => p.key === periodPreset)?.label;
+  const periodLabel = RANGE_PRESETS.find((p) => p.key === periodPreset)?.label;
 
   const rows = useMemo(
     () =>
@@ -42,7 +33,7 @@ export function CaloriesPage({ year, month }: { year: number; month: number }) {
           date,
           weight: cal?.weight ?? null,
           intake: totalCalories(cal),
-          objectif: calorieTarget(cal?.weight ?? null, profile),
+          objectif: calorieTarget(cal, profile),
           deficit: calorieDeficit(cal, profile),
           protein: cal?.protein ?? null,
           proteinObjectif: proteinTarget(cal?.weight ?? null, profile),
@@ -106,7 +97,7 @@ export function CaloriesPage({ year, month }: { year: number; month: number }) {
           <div className="px-4 pb-4 flex flex-wrap items-center gap-3">
             <select
               value={periodPreset}
-              onChange={(e) => setPeriodPreset(e.target.value as PeriodSelection)}
+              onChange={(e) => setPeriodPreset(e.target.value as RangePreset)}
               className="rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1 text-sm text-slate-700 dark:text-slate-200"
             >
               {RANGE_PRESETS.map((p) => (
@@ -114,27 +105,7 @@ export function CaloriesPage({ year, month }: { year: number; month: number }) {
                   {p.label}
                 </option>
               ))}
-              <option value="custom">Personnalisé…</option>
             </select>
-            {periodPreset === "custom" && (
-              <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
-                <input
-                  type="date"
-                  value={customStart}
-                  max={customEnd}
-                  onChange={(e) => setCustomStart(e.target.value)}
-                  className="rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1 text-sm text-slate-700 dark:text-slate-200"
-                />
-                <span className="text-slate-400">→</span>
-                <input
-                  type="date"
-                  value={customEnd}
-                  min={customStart}
-                  onChange={(e) => setCustomEnd(e.target.value)}
-                  className="rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1 text-sm text-slate-700 dark:text-slate-200"
-                />
-              </div>
-            )}
             <span className="text-xs text-slate-400 dark:text-slate-500">
               Le tableau détaillé plus bas reste sur le mois affiché en haut de page ({RANGE_PRESETS[0].label.toLowerCase()}).
             </span>

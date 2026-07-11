@@ -35,13 +35,15 @@ export function proteinTarget(weightKg: number | null, profile: Profile): number
   return weightKg * profile.proteinPerKg;
 }
 
-// The calorie intake to actually aim for — TDEE adjusted by the profile's
-// deficit/surplus goal (e.g. TDEE - 500 to target a cut). This is what shows
-// as "Objectif" — the actionable number, as opposed to raw maintenance TDEE.
-export function calorieTarget(weightKg: number | null, profile: Profile): number | null {
-  const maintenance = tdee(weightKg, profile);
+// The calorie intake to actually aim for — TDEE adjusted by a deficit/surplus
+// goal (e.g. TDEE - 500 to target a cut). This is what shows as "Objectif".
+// Uses the day's locked-in goal snapshot when it has one (already filled in),
+// falling back to the profile's live goal for a day that's still empty.
+export function calorieTarget(day: CalorieDay | undefined, profile: Profile): number | null {
+  const maintenance = tdee(day?.weight ?? null, profile);
   if (maintenance === null) return null;
-  return maintenance + profile.calorieGoal;
+  const goal = day?.calorieGoalAtEntry ?? profile.calorieGoal;
+  return maintenance + goal;
 }
 
 // Positive = calorie deficit (on track to lose fat), negative = surplus.

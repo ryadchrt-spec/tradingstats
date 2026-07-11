@@ -43,6 +43,7 @@ export function emptyCalorieDay(date: string): CalorieDay {
     dinner: null,
     other: null,
     protein: null,
+    calorieGoalAtEntry: null,
   };
 }
 

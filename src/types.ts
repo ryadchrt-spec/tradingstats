@@ -71,6 +71,10 @@ export interface CalorieDay {
   dinner: number | null; // kcal — "Soir"
   other: number | null; // kcal — "Autre" (snacks, etc.)
   protein: number | null; // g consumed
+  // Snapshot of the profile's calorieGoal the first time this day was
+  // edited — locked in so later changes to the goal don't retroactively
+  // rewrite the "Objectif" of days already filled in.
+  calorieGoalAtEntry: number | null;
 }
 
 export type CalorieMealKey = "breakfast" | "lunch" | "dinner" | "other";
