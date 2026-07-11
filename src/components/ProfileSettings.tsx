@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useStore } from "../store";
-import { ACTIVITY_LEVELS } from "../calorieCompute";
+import { ACTIVITY_LEVELS, CALORIE_GOAL_PRESETS, formatSigned } from "../calorieCompute";
 import type { Sex } from "../types";
 
 export function ProfileSettings() {
@@ -71,6 +71,33 @@ export function ProfileSettings() {
               onChange={(e) => setProfile({ proteinPerKg: Number(e.target.value) })}
               className="rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1 text-sm text-slate-700 dark:text-slate-200"
             />
+          </label>
+          <label className="flex flex-col gap-1 text-xs text-slate-500 dark:text-slate-400 col-span-2">
+            Objectif quotidien (kcal)
+            <input
+              type="number"
+              step={50}
+              value={profile.calorieGoal}
+              onChange={(e) => setProfile({ calorieGoal: Number(e.target.value) })}
+              className="rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1 text-sm text-slate-700 dark:text-slate-200"
+            />
+            <span className="text-[10px] text-slate-400 dark:text-slate-500">Négatif = déficit (perte de poids), positif = surplus (prise de masse)</span>
+            <div className="flex flex-wrap gap-1 mt-1">
+              {CALORIE_GOAL_PRESETS.map((g) => (
+                <button
+                  key={g}
+                  type="button"
+                  onClick={() => setProfile({ calorieGoal: g })}
+                  className={`px-2 py-0.5 rounded-full border text-xs ${
+                    profile.calorieGoal === g
+                      ? "bg-blue-600 border-blue-600 text-white"
+                      : "border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                  }`}
+                >
+                  {formatSigned(g)}
+                </button>
+              ))}
+            </div>
           </label>
         </div>
       )}

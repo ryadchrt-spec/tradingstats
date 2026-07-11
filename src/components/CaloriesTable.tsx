@@ -1,7 +1,7 @@
 import { useStore } from "../store";
 import { daysInMonth, dayNameFr, toDateKey, isToday } from "../dateUtils";
 import { average } from "../compute";
-import { totalCalories, tdee, calorieDeficit, proteinTarget, formatNum, formatSigned } from "../calorieCompute";
+import { totalCalories, calorieTarget, calorieDeficit, proteinTarget, formatNum, formatSigned } from "../calorieCompute";
 import { NumberCell } from "./NumberCell";
 import type { CalorieMealKey } from "../types";
 
@@ -22,7 +22,7 @@ export function CaloriesTable({ year, month }: { year: number; month: number }) 
 
   const monthlyWeight = average(dates.map((d) => data.calories[d]?.weight ?? null));
   const monthlyTotals = average(dates.map((d) => totalCalories(data.calories[d])));
-  const monthlyTdee = average(dates.map((d) => tdee(data.calories[d]?.weight ?? null, profile)));
+  const monthlyTarget = average(dates.map((d) => calorieTarget(data.calories[d]?.weight ?? null, profile)));
   const monthlyDeficit = average(dates.map((d) => calorieDeficit(data.calories[d], profile)));
   const monthlyProtein = average(dates.map((d) => data.calories[d]?.protein ?? null));
   const monthlyProteinTarget = average(dates.map((d) => proteinTarget(data.calories[d]?.weight ?? null, profile)));
@@ -52,7 +52,7 @@ export function CaloriesTable({ year, month }: { year: number; month: number }) 
             <th className="px-2 py-2 text-right tabular-nums font-normal">{formatNum(monthlyWeight, 1)}</th>
             <th className="px-2 py-2" colSpan={4}></th>
             <th className="px-2 py-2 text-right tabular-nums font-normal">{formatNum(monthlyTotals)}</th>
-            <th className="px-2 py-2 text-right tabular-nums font-normal">{formatNum(monthlyTdee)}</th>
+            <th className="px-2 py-2 text-right tabular-nums font-normal">{formatNum(monthlyTarget)}</th>
             <th className="px-2 py-2 text-right tabular-nums font-normal">{formatSigned(monthlyDeficit)}</th>
             <th className="px-2 py-2 text-right tabular-nums font-normal">{formatNum(monthlyProtein)}</th>
             <th className="px-2 py-2 text-right tabular-nums font-normal">{formatNum(monthlyProteinTarget)}</th>
@@ -66,7 +66,7 @@ export function CaloriesTable({ year, month }: { year: number; month: number }) 
             const cal = data.calories[date];
             const today = isToday(date);
             const total = totalCalories(cal);
-            const objectif = tdee(cal?.weight ?? null, profile);
+            const objectif = calorieTarget(cal?.weight ?? null, profile);
             const deficit = calorieDeficit(cal, profile);
             const objProt = proteinTarget(cal?.weight ?? null, profile);
             return (

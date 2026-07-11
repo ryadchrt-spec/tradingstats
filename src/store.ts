@@ -123,7 +123,9 @@ export const useStore = create<Store>()(
       name: "tradingstats-productivity-v1",
       // Persisted state from before the calories/profile fields existed only has
       // `dashboard`/`health` — a shallow merge would otherwise wipe the new
-      // defaults out entirely, so merge `data` one level deep instead.
+      // defaults out entirely, so merge `data` (and `profile` beneath it) one
+      // level deeper instead. Same reasoning applies every time a new field is
+      // added to `profile` (e.g. calorieGoal) after users already have one saved.
       merge: (persisted, current) => {
         const persistedState = (persisted ?? {}) as Partial<Store>;
         return {
@@ -132,6 +134,10 @@ export const useStore = create<Store>()(
           data: {
             ...current.data,
             ...(persistedState.data ?? {}),
+            profile: {
+              ...current.data.profile,
+              ...(persistedState.data?.profile ?? {}),
+            },
           },
         };
       },

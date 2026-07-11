@@ -85,6 +85,9 @@ export interface Profile {
   activityMultiplier: number;
   // Protein target in grams per kg of bodyweight.
   proteinPerKg: number;
+  // Daily calorie goal relative to TDEE: negative = deficit (cutting),
+  // positive = surplus (bulking), 0 = maintenance.
+  calorieGoal: number;
 }
 
 export interface AppData {

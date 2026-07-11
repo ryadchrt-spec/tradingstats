@@ -39,7 +39,7 @@ export function Toolbar() {
         dashboard: parsed.dashboard,
         health: parsed.health,
         calories: parsed.calories ?? {},
-        profile: parsed.profile ?? defaultProfile(),
+        profile: { ...defaultProfile(), ...(parsed.profile ?? {}) },
       });
     } catch {
       alert("Fichier JSON invalide.");

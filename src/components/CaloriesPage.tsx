@@ -1,14 +1,17 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
 import { useStore } from "../store";
-import { daysInMonth, toDateKey } from "../dateUtils";
-import { totalCalories, tdee, calorieDeficit, proteinTarget, theoreticalKgChange, formatNum, formatSigned } from "../calorieCompute";
+import { todayKey, addDaysToKey, shortDateLabelFr } from "../dateUtils";
+import { totalCalories, calorieTarget, calorieDeficit, proteinTarget, theoreticalKgChange, formatNum, formatSigned } from "../calorieCompute";
 import { useDarkMode } from "../useDarkMode";
 import { StatTile } from "./StatItem";
 import { ChartTooltip } from "./ChartTooltip";
 import { COLORS } from "../chartColors";
 import { ProfileSettings } from "./ProfileSettings";
 import { CaloriesTable } from "./CaloriesTable";
+import { RANGE_PRESETS, resolveRange, rangeDates, chunkAverage, chunkDates, type RangePreset, type DateRange } from "../ranges";
+
+type PeriodSelection = RangePreset | "custom";
 
 export function CaloriesPage({ year, month }: { year: number; month: number }) {
   const data = useStore((s) => s.data);
@@ -16,24 +19,36 @@ export function CaloriesPage({ year, month }: { year: number; month: number }) {
   const c = dark ? COLORS.dark : COLORS.light;
   const profile = data.profile;
 
-  const nDays = daysInMonth(year, month);
-  const dates = Array.from({ length: nDays }, (_, i) => toDateKey(year, month, i + 1));
+  const [periodOpen, setPeriodOpen] = useState(false);
+  const [periodPreset, setPeriodPreset] = useState<PeriodSelection>("month");
+  const [customStart, setCustomStart] = useState<string>(() => addDaysToKey(todayKey(), -29));
+  const [customEnd, setCustomEnd] = useState<string>(() => todayKey());
+
+  const monthAnchor = { year, month };
+  const periodRange: DateRange = useMemo(() => {
+    if (periodPreset === "custom") {
+      return customStart <= customEnd ? { start: customStart, end: customEnd } : { start: customEnd, end: customStart };
+    }
+    return resolveRange(periodPreset, data, monthAnchor);
+  }, [periodPreset, data, year, month, customStart, customEnd]);
+  const periodDates = useMemo(() => rangeDates(periodRange), [periodRange.start, periodRange.end]);
+  const periodLabel = periodPreset === "custom" ? "Personnalisé" : RANGE_PRESETS.find((p) => p.key === periodPreset)?.label;
 
   const rows = useMemo(
     () =>
-      dates.map((date) => {
+      periodDates.map((date) => {
         const cal = data.calories[date];
         return {
           date,
           weight: cal?.weight ?? null,
           intake: totalCalories(cal),
-          objectif: tdee(cal?.weight ?? null, profile),
+          objectif: calorieTarget(cal?.weight ?? null, profile),
           deficit: calorieDeficit(cal, profile),
           protein: cal?.protein ?? null,
           proteinObjectif: proteinTarget(cal?.weight ?? null, profile),
         };
       }),
-    [data.calories, dates.join(","), profile]
+    [data.calories, periodDates.join(","), profile]
   );
 
   const totalDeficit = rows.reduce((sum, r) => sum + (r.deficit ?? 0), 0);
@@ -52,20 +67,86 @@ export function CaloriesPage({ year, month }: { year: number; month: number }) {
     ? proteinDays.reduce((s, r) => s + (r.proteinObjectif ?? 0), 0) / proteinDays.length
     : null;
 
-  const dayNum = (date: string) => Number(date.slice(-2));
-  const weightData = rows.map((r) => ({ x: dayNum(r.date), value: r.weight }));
-  const calorieData = rows.map((r) => ({ x: dayNum(r.date), intake: r.intake, objectif: r.objectif }));
-  const proteinData = rows.map((r) => ({ x: dayNum(r.date), protein: r.protein, objectif: r.proteinObjectif }));
+  // Cap chart points so long ranges stay readable; a single month stays daily, unchanged.
+  const targetPoints = Math.min(periodDates.length, 31) || 1;
+  const isDaily = periodPreset === "month";
+  const labelDates = chunkDates(periodDates, targetPoints);
+  const xLabel = (date: string, i: number) => (isDaily ? i + 1 : shortDateLabelFr(date));
+
+  const weightChunked = chunkAverage(rows.map((r) => r.weight), targetPoints);
+  const intakeChunked = chunkAverage(rows.map((r) => r.intake), targetPoints);
+  const objectifChunked = chunkAverage(rows.map((r) => r.objectif), targetPoints);
+  const proteinChunked = chunkAverage(rows.map((r) => r.protein), targetPoints);
+  const proteinObjChunked = chunkAverage(rows.map((r) => r.proteinObjectif), targetPoints);
+
+  const weightData = labelDates.map((date, i) => ({ x: xLabel(date, i), value: weightChunked[i] ?? null }));
+  const calorieData = labelDates.map((date, i) => ({ x: xLabel(date, i), intake: intakeChunked[i] ?? null, objectif: objectifChunked[i] ?? null }));
+  const proteinData = labelDates.map((date, i) => ({ x: xLabel(date, i), protein: proteinChunked[i] ?? null, objectif: proteinObjChunked[i] ?? null }));
+
+  // Computed explicitly instead of via recharts' "dataMin"/"dataMax" domain
+  // strings, which mis-render when the series starts with a run of nulls.
+  const weightValues = weightChunked.filter((v): v is number => v !== null);
+  const weightDomain: [number, number] = weightValues.length
+    ? [Math.floor(Math.min(...weightValues) - 1), Math.ceil(Math.max(...weightValues) + 1)]
+    : [0, 100];
 
   return (
     <div className="flex flex-col gap-6">
       <ProfileSettings />
 
+      <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
+        <button
+          onClick={() => setPeriodOpen((v) => !v)}
+          className="w-full flex items-center justify-between px-4 py-3 text-sm font-semibold text-slate-700 dark:text-slate-200"
+        >
+          <span>Période affichée (résumé et graphiques) : {periodLabel}</span>
+          <span className="text-slate-400 text-xs">{periodOpen ? "Masquer ▲" : "Modifier ▼"}</span>
+        </button>
+        {periodOpen && (
+          <div className="px-4 pb-4 flex flex-wrap items-center gap-3">
+            <select
+              value={periodPreset}
+              onChange={(e) => setPeriodPreset(e.target.value as PeriodSelection)}
+              className="rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1 text-sm text-slate-700 dark:text-slate-200"
+            >
+              {RANGE_PRESETS.map((p) => (
+                <option key={p.key} value={p.key}>
+                  {p.label}
+                </option>
+              ))}
+              <option value="custom">Personnalisé…</option>
+            </select>
+            {periodPreset === "custom" && (
+              <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+                <input
+                  type="date"
+                  value={customStart}
+                  max={customEnd}
+                  onChange={(e) => setCustomStart(e.target.value)}
+                  className="rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1 text-sm text-slate-700 dark:text-slate-200"
+                />
+                <span className="text-slate-400">→</span>
+                <input
+                  type="date"
+                  value={customEnd}
+                  min={customStart}
+                  onChange={(e) => setCustomEnd(e.target.value)}
+                  className="rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1 text-sm text-slate-700 dark:text-slate-200"
+                />
+              </div>
+            )}
+            <span className="text-xs text-slate-400 dark:text-slate-500">
+              Le tableau détaillé plus bas reste sur le mois affiché en haut de page ({RANGE_PRESETS[0].label.toLowerCase()}).
+            </span>
+          </div>
+        )}
+      </div>
+
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         <StatTile
           label="Déficit total"
           value={trackedDeficitDays ? `${formatSigned(totalDeficit)} kcal` : "—"}
-          sub={`${trackedDeficitDays}/${nDays} jours suivis`}
+          sub={`${trackedDeficitDays}/${periodDates.length} jours suivis`}
         />
         <StatTile label="Perte théorique" value={theoreticalKg === null ? "—" : `${formatSigned(theoreticalKg, 2)} kg`} sub="Déficit ÷ 7700" />
         <StatTile
@@ -87,9 +168,9 @@ export function CaloriesPage({ year, month }: { year: number; month: number }) {
           <ResponsiveContainer width="100%" height={200}>
             <LineChart data={weightData} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
               <CartesianGrid vertical={false} stroke={c.grid} />
-              <XAxis dataKey="x" tick={{ fill: c.axis, fontSize: 11 }} axisLine={{ stroke: c.grid }} tickLine={false} />
+              <XAxis dataKey="x" tick={{ fill: c.axis, fontSize: 11 }} axisLine={{ stroke: c.grid }} tickLine={false} interval={Math.max(0, Math.floor(weightData.length / 8))} />
               <YAxis
-                domain={["dataMin - 1", "dataMax + 1"]}
+                domain={weightDomain}
                 tick={{ fill: c.axis, fontSize: 11 }}
                 axisLine={false}
                 tickLine={false}
@@ -119,7 +200,7 @@ export function CaloriesPage({ year, month }: { year: number; month: number }) {
           <ResponsiveContainer width="100%" height={200}>
             <LineChart data={calorieData} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
               <CartesianGrid vertical={false} stroke={c.grid} />
-              <XAxis dataKey="x" tick={{ fill: c.axis, fontSize: 11 }} axisLine={{ stroke: c.grid }} tickLine={false} />
+              <XAxis dataKey="x" tick={{ fill: c.axis, fontSize: 11 }} axisLine={{ stroke: c.grid }} tickLine={false} interval={Math.max(0, Math.floor(calorieData.length / 8))} />
               <YAxis tick={{ fill: c.axis, fontSize: 11 }} axisLine={false} tickLine={false} width={36} />
               <Tooltip content={<ChartTooltip dark={dark} unit=" kcal" />} cursor={{ stroke: c.grid }} />
               <Line type="monotone" dataKey="intake" stroke={c.series1} strokeWidth={2} dot={false} activeDot={{ r: 4, fill: c.series1, stroke: c.surface, strokeWidth: 2 }} connectNulls />
@@ -145,7 +226,7 @@ export function CaloriesPage({ year, month }: { year: number; month: number }) {
           <ResponsiveContainer width="100%" height={200}>
             <LineChart data={proteinData} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
               <CartesianGrid vertical={false} stroke={c.grid} />
-              <XAxis dataKey="x" tick={{ fill: c.axis, fontSize: 11 }} axisLine={{ stroke: c.grid }} tickLine={false} />
+              <XAxis dataKey="x" tick={{ fill: c.axis, fontSize: 11 }} axisLine={{ stroke: c.grid }} tickLine={false} interval={Math.max(0, Math.floor(proteinData.length / 8))} />
               <YAxis tick={{ fill: c.axis, fontSize: 11 }} axisLine={false} tickLine={false} width={36} />
               <Tooltip content={<ChartTooltip dark={dark} unit=" g" />} cursor={{ stroke: c.grid }} />
               <Line type="monotone" dataKey="protein" stroke={c.series1} strokeWidth={2} dot={false} activeDot={{ r: 4, fill: c.series1, stroke: c.surface, strokeWidth: 2 }} connectNulls />

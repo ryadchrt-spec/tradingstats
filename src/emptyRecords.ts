@@ -53,5 +53,6 @@ export function defaultProfile(): Profile {
     sex: "M",
     activityMultiplier: 1.2,
     proteinPerKg: 2,
+    calorieGoal: 0,
   };
 }
