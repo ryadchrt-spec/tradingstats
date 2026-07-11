@@ -64,6 +64,29 @@ export function addMonthsToKey(key: string, months: number): string {
   return formatDateKey(probe);
 }
 
+// Helpers for "YYYY-MM" month-picker values (distinct from full "YYYY-MM-DD"
+// date keys) — used by the Statistiques custom range, which only lets the
+// user pick start/end months rather than exact days.
+export function monthStrToFirstDay(monthStr: string): string {
+  return `${monthStr}-01`;
+}
+
+export function monthStrToLastDay(monthStr: string): string {
+  const [y, m] = monthStr.split("-").map(Number);
+  return toDateKey(y, m - 1, daysInMonth(y, m - 1));
+}
+
+export function currentMonthStr(): string {
+  const now = new Date();
+  return monthKey(now.getFullYear(), now.getMonth());
+}
+
+export function shiftMonthStr(monthStr: string, months: number): string {
+  const [y, m] = monthStr.split("-").map(Number);
+  const d = new Date(Date.UTC(y, m - 1 + months, 1));
+  return monthKey(d.getUTCFullYear(), d.getUTCMonth());
+}
+
 export function enumerateDateKeys(startKey: string, endKey: string): string[] {
   const out: string[] = [];
   let cur = startKey;

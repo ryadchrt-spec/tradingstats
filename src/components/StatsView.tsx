@@ -3,7 +3,7 @@ import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tool
 import { useStore } from "../store";
 import type { AppData } from "../types";
 import { DASHBOARD_HABITS, HEALTH_HABITS } from "../habits";
-import { shortDateLabelFr, todayKey, addDaysToKey } from "../dateUtils";
+import { shortDateLabelFr, todayKey, currentMonthStr, shiftMonthStr, monthStrToFirstDay, monthStrToLastDay } from "../dateUtils";
 import { average, dashboardDailyAverage, healthDayAverage, hasAnyDashboardData, currentStreak, daysTracked, scoreToNum, toDiffPair, type DiffPair } from "../compute";
 import { useDarkMode } from "../useDarkMode";
 import { StatTile } from "./StatItem";
@@ -86,19 +86,22 @@ export function StatsView({ year, month }: { year: number; month: number }) {
 
   const [primaryPreset, setPrimaryPreset] = useState<PrimarySelection>("month");
   const [comparePreset, setComparePreset] = useState<CompareSelection>("none");
-  const [customStart, setCustomStart] = useState<string>(() => addDaysToKey(todayKey(), -29));
-  const [customEnd, setCustomEnd] = useState<string>(() => todayKey());
-  const [compareCustomStart, setCompareCustomStart] = useState<string>(() => addDaysToKey(todayKey(), -59));
-  const [compareCustomEnd, setCompareCustomEnd] = useState<string>(() => addDaysToKey(todayKey(), -30));
+  const [customStartMonth, setCustomStartMonth] = useState<string>(() => shiftMonthStr(currentMonthStr(), -1));
+  const [customEndMonth, setCustomEndMonth] = useState<string>(() => currentMonthStr());
+  const [compareCustomStartMonth, setCompareCustomStartMonth] = useState<string>(() => shiftMonthStr(currentMonthStr(), -3));
+  const [compareCustomEndMonth, setCompareCustomEndMonth] = useState<string>(() => shiftMonthStr(currentMonthStr(), -2));
 
   const monthAnchor = { year, month };
 
   const primaryRange: DateRange = useMemo(() => {
     if (primaryPreset === "custom") {
-      return customStart <= customEnd ? { start: customStart, end: customEnd } : { start: customEnd, end: customStart };
+      const [startMonth, endMonth] =
+        customStartMonth <= customEndMonth ? [customStartMonth, customEndMonth] : [customEndMonth, customStartMonth];
+      const end = monthStrToLastDay(endMonth);
+      return { start: monthStrToFirstDay(startMonth), end: end > todayKey() ? todayKey() : end };
     }
     return resolveRange(primaryPreset, data, monthAnchor);
-  }, [primaryPreset, data, year, month, customStart, customEnd]);
+  }, [primaryPreset, data, year, month, customStartMonth, customEndMonth]);
   const primaryDates = useMemo(() => rangeDates(primaryRange), [primaryRange.start, primaryRange.end]);
 
   const primaryDailyAverages = useMemo(
@@ -115,12 +118,15 @@ export function StatsView({ year, month }: { year: number; month: number }) {
   const compareRange: DateRange | null = useMemo(() => {
     if (!isComparing) return null;
     if (comparePreset === "custom") {
-      return compareCustomStart <= compareCustomEnd
-        ? { start: compareCustomStart, end: compareCustomEnd }
-        : { start: compareCustomEnd, end: compareCustomStart };
+      const [startMonth, endMonth] =
+        compareCustomStartMonth <= compareCustomEndMonth
+          ? [compareCustomStartMonth, compareCustomEndMonth]
+          : [compareCustomEndMonth, compareCustomStartMonth];
+      const end = monthStrToLastDay(endMonth);
+      return { start: monthStrToFirstDay(startMonth), end: end > todayKey() ? todayKey() : end };
     }
     return resolveRange(comparePreset as RangePreset, data, monthAnchor, primaryRange);
-  }, [comparePreset, data, year, month, primaryRange.start, primaryRange.end, compareCustomStart, compareCustomEnd]);
+  }, [comparePreset, data, year, month, primaryRange.start, primaryRange.end, compareCustomStartMonth, compareCustomEndMonth]);
   const compareDates = useMemo(() => (compareRange ? rangeDates(compareRange) : []), [compareRange?.start, compareRange?.end]);
   const compareDailyAverages = useMemo(
     () =>
@@ -205,18 +211,18 @@ export function StatsView({ year, month }: { year: number; month: number }) {
         {primaryPreset === "custom" && (
           <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
             <input
-              type="date"
-              value={customStart}
-              max={customEnd}
-              onChange={(e) => setCustomStart(e.target.value)}
+              type="month"
+              value={customStartMonth}
+              max={customEndMonth}
+              onChange={(e) => setCustomStartMonth(e.target.value)}
               className="rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1 text-sm text-slate-700 dark:text-slate-200"
             />
             <span className="text-slate-400">→</span>
             <input
-              type="date"
-              value={customEnd}
-              min={customStart}
-              onChange={(e) => setCustomEnd(e.target.value)}
+              type="month"
+              value={customEndMonth}
+              min={customStartMonth}
+              onChange={(e) => setCustomEndMonth(e.target.value)}
               className="rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1 text-sm text-slate-700 dark:text-slate-200"
             />
           </div>
@@ -241,18 +247,18 @@ export function StatsView({ year, month }: { year: number; month: number }) {
         {comparePreset === "custom" && (
           <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
             <input
-              type="date"
-              value={compareCustomStart}
-              max={compareCustomEnd}
-              onChange={(e) => setCompareCustomStart(e.target.value)}
+              type="month"
+              value={compareCustomStartMonth}
+              max={compareCustomEndMonth}
+              onChange={(e) => setCompareCustomStartMonth(e.target.value)}
               className="rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1 text-sm text-slate-700 dark:text-slate-200"
             />
             <span className="text-slate-400">→</span>
             <input
-              type="date"
-              value={compareCustomEnd}
-              min={compareCustomStart}
-              onChange={(e) => setCompareCustomEnd(e.target.value)}
+              type="month"
+              value={compareCustomEndMonth}
+              min={compareCustomStartMonth}
+              onChange={(e) => setCompareCustomEndMonth(e.target.value)}
               className="rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1 text-sm text-slate-700 dark:text-slate-200"
             />
           </div>
