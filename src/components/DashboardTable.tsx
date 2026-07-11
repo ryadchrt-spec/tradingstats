@@ -1,7 +1,7 @@
 import { useStore } from "../store";
 import { DASHBOARD_HABITS } from "../habits";
 import { daysInMonth, dayNameFr, toDateKey, isToday } from "../dateUtils";
-import { average, dashboardDayWin, healthDayAverage, formatPct, hasAnyDashboardData } from "../compute";
+import { average, dashboardDayWin, healthDayAverage, formatPct, hasAnyDashboardData, scoreToNum } from "../compute";
 import { ScoreCell } from "./ScoreCell";
 import type { DashboardKey } from "../types";
 
@@ -18,17 +18,17 @@ export function DashboardTable({ year, month }: { year: number; month: number })
     const hAvg = healthDayAverage(data.health[date]);
     return hasAnyDashboardData(d) ? dashboardDayWin(d, hAvg) : null;
   });
-  const monthlyDayWin = average(dayWins as any);
+  const monthlyDayWin = average(dayWins);
 
   const monthlyHabitAverages = DASHBOARD_HABITS.map((habit) =>
-    average(dates.map((date) => data.dashboard[date]?.[habit.key] ?? null))
+    average(dates.map((date) => scoreToNum(data.dashboard[date]?.[habit.key])))
   );
   const monthlyHealthAvg = average(dates.map((date) => healthDayAverage(data.health[date])));
   const monthlyTaskAverages = [1, 2, 3].map((i) =>
     average(
       dates.map((date) => {
         const t = data.dashboard[date]?.[`task${i}` as "task1" | "task2" | "task3"];
-        return t ? t.score : null;
+        return t ? scoreToNum(t.score) : null;
       })
     )
   );

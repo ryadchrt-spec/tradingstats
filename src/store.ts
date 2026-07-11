@@ -2,39 +2,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { AppData, DashboardDay, DashboardKey, HealthDay, HealthKey, Score, TaskEntry } from "./types";
 import { buildSeedData } from "./seedData";
-
-function emptyDashboardDay(date: string): DashboardDay {
-  return {
-    date,
-    sleepOnTime: null,
-    wakeOnTime: null,
-    sport: null,
-    workMorning: null,
-    workAfternoon: null,
-    controlEmotion: null,
-    reading: null,
-    training: null,
-    task1: { label: "", score: null },
-    task2: { label: "", score: null },
-    task3: { label: "", score: null },
-  };
-}
-
-function emptyHealthDay(date: string): HealthDay {
-  return {
-    date,
-    shower: null,
-    teeth: null,
-    oil: null,
-    healthy: null,
-    supplement: null,
-    walk: null,
-    noFap: null,
-    tracking: null,
-    morningRoutine: null,
-    noSmoke: null,
-  };
-}
+import { emptyDashboardDay, emptyHealthDay } from "./emptyRecords";
 
 interface Store {
   data: AppData;
@@ -44,6 +12,7 @@ interface Store {
   getDashboardDay: (date: string) => DashboardDay;
   getHealthDay: (date: string) => HealthDay;
   importData: (data: AppData) => void;
+  mergeData: (data: Partial<AppData>) => void;
   resetAll: () => void;
 }
 
@@ -102,6 +71,16 @@ export const useStore = create<Store>()(
       getHealthDay: (date) => get().data.health[date] ?? emptyHealthDay(date),
 
       importData: (data) => set({ data }),
+
+      // Upserts by date key instead of replacing everything — used for importing
+      // one month's Excel workbook at a time without wiping out other months.
+      mergeData: (incoming) =>
+        set((state) => ({
+          data: {
+            dashboard: { ...state.data.dashboard, ...(incoming.dashboard ?? {}) },
+            health: { ...state.data.health, ...(incoming.health ?? {}) },
+          },
+        })),
 
       resetAll: () => set({ data: { dashboard: {}, health: {} } }),
     }),

@@ -1,7 +1,7 @@
 import { useStore } from "../store";
 import { HEALTH_HABITS } from "../habits";
 import { daysInMonth, dayNameFr, toDateKey, isToday } from "../dateUtils";
-import { average, healthDayAverage, formatPct } from "../compute";
+import { average, healthDayAverage, formatPct, scoreToNum } from "../compute";
 import { ScoreCell } from "./ScoreCell";
 import type { HealthKey } from "../types";
 
@@ -13,7 +13,7 @@ export function HealthTable({ year, month }: { year: number; month: number }) {
   const dates = Array.from({ length: nDays }, (_, i) => toDateKey(year, month, i + 1));
 
   const monthlyHabitAverages = HEALTH_HABITS.map((habit) =>
-    average(dates.map((date) => data.health[date]?.[habit.key] ?? null))
+    average(dates.map((date) => scoreToNum(data.health[date]?.[habit.key])))
   );
   const monthlyOverall = average(dates.map((date) => healthDayAverage(data.health[date])));
 

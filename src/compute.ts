@@ -7,9 +7,16 @@ export function average(values: (number | null | undefined)[]): number | null {
   return nums.reduce((a, b) => a + b, 0) / nums.length;
 }
 
+// Converts a Score to a plain number for averaging. "na" (explicitly excluded)
+// and null (not filled in) both drop out of the calculation.
+export function scoreToNum(v: Score | null | undefined): number | null {
+  if (v === null || v === undefined || v === "na") return null;
+  return v;
+}
+
 export function healthDayAverage(h: HealthDay | undefined): number | null {
   if (!h) return null;
-  return average(HEALTH_HABITS.map((habit) => h[habit.key]));
+  return average(HEALTH_HABITS.map((habit) => scoreToNum(h[habit.key])));
 }
 
 // Mirrors the spreadsheet's Day Win = AVERAGE(D:R): habits + health + task scores.
@@ -18,9 +25,9 @@ export function dashboardDayWin(
   healthAvg: number | null
 ): number | null {
   if (!d) return null;
-  const values: (number | null)[] = DASHBOARD_HABITS.map((habit) => d[habit.key]);
+  const values: (number | null)[] = DASHBOARD_HABITS.map((habit) => scoreToNum(d[habit.key]));
   values.push(healthAvg);
-  values.push(d.task1.score, d.task2.score, d.task3.score);
+  values.push(scoreToNum(d.task1.score), scoreToNum(d.task2.score), scoreToNum(d.task3.score));
   return average(values);
 }
 
@@ -49,12 +56,13 @@ export function formatPct(v: number | null): string {
 
 export function scoreLabel(v: Score): string {
   if (v === null) return "";
+  if (v === "na") return "N/A";
   if (v === 1) return "1";
   if (v === 0.5) return "½";
   return "0";
 }
 
-export const SCORE_CYCLE: Score[] = [null, 0, 0.5, 1];
+export const SCORE_CYCLE: Score[] = [null, 0, 0.5, 1, "na"];
 
 export function nextScore(v: Score): Score {
   const idx = SCORE_CYCLE.indexOf(v);

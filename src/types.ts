@@ -1,4 +1,6 @@
-export type Score = 0 | 0.5 | 1 | null;
+// "na" marks a cell as explicitly excluded from every average/Day Win calculation
+// (distinct from null, which just means "not filled in yet").
+export type Score = 0 | 0.5 | 1 | null | "na";
 
 export interface TaskEntry {
   label: string;
