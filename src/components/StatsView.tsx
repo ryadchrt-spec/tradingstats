@@ -1,22 +1,14 @@
 import { useMemo, useState } from "react";
-import {
-  ResponsiveContainer,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  BarChart,
-  Bar,
-  Cell,
-} from "recharts";
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, BarChart, Bar, Cell } from "recharts";
 import { useStore } from "../store";
 import { DASHBOARD_HABITS, HEALTH_HABITS } from "../habits";
-import { shortDateLabelFr } from "../dateUtils";
+import { shortDateLabelFr, todayKey, addDaysToKey } from "../dateUtils";
 import { average, dashboardDailyAverage, healthDayAverage, hasAnyDashboardData, currentStreak, daysTracked, scoreToNum } from "../compute";
 import { useDarkMode } from "../useDarkMode";
 import { StatTile } from "./StatItem";
+import { ChartTooltip } from "./ChartTooltip";
+import { COLORS } from "../chartColors";
+import { MonthlyBreakdown } from "./MonthlyBreakdown";
 import {
   RANGE_PRESETS,
   COMPARE_PRESETS,
@@ -25,54 +17,10 @@ import {
   chunkAverage,
   chunkDates,
   type RangePreset,
+  type DateRange,
 } from "../ranges";
 
-const COLORS = {
-  light: {
-    surface: "#fcfcfb",
-    grid: "#e1e0d9",
-    axis: "#898781",
-    primary: "#0b0b0b",
-    secondary: "#52514e",
-    series1: "#2a78d6",
-    series2: "#1baf7a",
-  },
-  dark: {
-    surface: "#1a1a19",
-    grid: "#2c2c2a",
-    axis: "#898781",
-    primary: "#ffffff",
-    secondary: "#c3c2b7",
-    series1: "#3987e5",
-    series2: "#199e70",
-  },
-};
-
-function ChartTooltip({ active, payload, label, dark, unit }: any) {
-  if (!active || !payload || !payload.length) return null;
-  const c = dark ? COLORS.dark : COLORS.light;
-  return (
-    <div
-      style={{
-        background: c.surface,
-        border: `1px solid ${dark ? "rgba(255,255,255,0.10)" : "rgba(11,11,11,0.10)"}`,
-        borderRadius: 8,
-        padding: "6px 10px",
-        fontSize: 12,
-        color: c.primary,
-        boxShadow: "0 4px 12px rgba(0,0,0,0.12)",
-      }}
-    >
-      <div style={{ color: c.secondary, marginBottom: 4 }}>{label}</div>
-      {payload.map((p: any, i: number) => (
-        <div key={i} style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>
-          <span style={{ width: 8, height: 8, borderRadius: 999, background: p.color, display: "inline-block" }} />
-          {p.value === null || p.value === undefined ? "—" : `${Math.round(p.value)}${unit}`}
-        </div>
-      ))}
-    </div>
-  );
-}
+type PrimarySelection = RangePreset | "custom";
 
 function habitBreakdown(
   dates: string[],
@@ -102,12 +50,19 @@ export function StatsView({ year, month }: { year: number; month: number }) {
   const dark = useDarkMode();
   const c = dark ? COLORS.dark : COLORS.light;
 
-  const [primaryPreset, setPrimaryPreset] = useState<RangePreset>("month");
+  const [primaryPreset, setPrimaryPreset] = useState<PrimarySelection>("month");
   const [comparePreset, setComparePreset] = useState<RangePreset | "none">("none");
+  const [customStart, setCustomStart] = useState<string>(() => addDaysToKey(todayKey(), -29));
+  const [customEnd, setCustomEnd] = useState<string>(() => todayKey());
 
   const monthAnchor = { year, month };
 
-  const primaryRange = useMemo(() => resolveRange(primaryPreset, data, monthAnchor), [primaryPreset, data, year, month]);
+  const primaryRange: DateRange = useMemo(() => {
+    if (primaryPreset === "custom") {
+      return customStart <= customEnd ? { start: customStart, end: customEnd } : { start: customEnd, end: customStart };
+    }
+    return resolveRange(primaryPreset, data, monthAnchor);
+  }, [primaryPreset, data, year, month, customStart, customEnd]);
   const primaryDates = useMemo(() => rangeDates(primaryRange), [primaryRange.start, primaryRange.end]);
 
   const primaryDailyAverages = useMemo(
@@ -175,7 +130,7 @@ export function StatsView({ year, month }: { year: number; month: number }) {
           Période
           <select
             value={primaryPreset}
-            onChange={(e) => setPrimaryPreset(e.target.value as RangePreset)}
+            onChange={(e) => setPrimaryPreset(e.target.value as PrimarySelection)}
             className="rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1 text-sm text-slate-700 dark:text-slate-200"
           >
             {RANGE_PRESETS.map((p) => (
@@ -183,8 +138,30 @@ export function StatsView({ year, month }: { year: number; month: number }) {
                 {p.label}
               </option>
             ))}
+            <option value="custom">Personnalisé…</option>
           </select>
         </label>
+
+        {primaryPreset === "custom" && (
+          <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+            <input
+              type="date"
+              value={customStart}
+              max={customEnd}
+              onChange={(e) => setCustomStart(e.target.value)}
+              className="rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1 text-sm text-slate-700 dark:text-slate-200"
+            />
+            <span className="text-slate-400">→</span>
+            <input
+              type="date"
+              value={customEnd}
+              min={customStart}
+              onChange={(e) => setCustomEnd(e.target.value)}
+              className="rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1 text-sm text-slate-700 dark:text-slate-200"
+            />
+          </div>
+        )}
+
         <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
           Comparer avec
           <select
@@ -216,7 +193,7 @@ export function StatsView({ year, month }: { year: number; month: number }) {
             <div className="flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400">
               <span className="flex items-center gap-1.5">
                 <span className="h-2 w-2 rounded-full inline-block" style={{ background: c.series1 }} />
-                {RANGE_PRESETS.find((p) => p.key === primaryPreset)?.label ?? "Période"}
+                {primaryPreset === "custom" ? "Personnalisé" : RANGE_PRESETS.find((p) => p.key === primaryPreset)?.label}
               </span>
               <span className="flex items-center gap-1.5">
                 <span className="h-2 w-2 rounded-full inline-block" style={{ background: c.series2 }} />
@@ -269,6 +246,8 @@ export function StatsView({ year, month }: { year: number; month: number }) {
           </LineChart>
         </ResponsiveContainer>
       </div>
+
+      <MonthlyBreakdown primaryDates={primaryDates} primaryDailyAverages={primaryDailyAverages} data={data} dark={dark} />
 
       <div className="grid md:grid-cols-2 gap-4">
         <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 p-4">

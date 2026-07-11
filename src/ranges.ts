@@ -1,5 +1,5 @@
 import type { AppData } from "./types";
-import { addMonthsToKey, addDaysToKey, enumerateDateKeys, todayKey } from "./dateUtils";
+import { addMonthsToKey, addDaysToKey, enumerateDateKeys, todayKey, monthLabelFr } from "./dateUtils";
 
 export type RangePreset = "month" | "3m" | "6m" | "9m" | "1y" | "all" | "previous";
 
@@ -112,4 +112,26 @@ export function chunkDates(dates: string[], targetPoints: number): string[] {
 
 export function rangeDates(range: DateRange): string[] {
   return enumerateDateKeys(range.start, range.end);
+}
+
+export interface MonthBucket {
+  key: string; // YYYY-MM
+  label: string; // "Juil. 2026"
+  dates: string[];
+}
+
+// Groups a flat list of date keys by calendar month — a bucket only contains
+// the dates that are actually in range, so a partial month at either edge of
+// the selection shows a partial (not misleadingly full) average.
+export function monthBuckets(dates: string[]): MonthBucket[] {
+  const map = new Map<string, string[]>();
+  for (const date of dates) {
+    const key = date.slice(0, 7);
+    const list = map.get(key);
+    if (list) list.push(date);
+    else map.set(key, [date]);
+  }
+  return [...map.entries()]
+    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+    .map(([key, ds]) => ({ key, label: monthLabelFr(ds[0]), dates: ds }));
 }
