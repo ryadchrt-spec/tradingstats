@@ -14,6 +14,7 @@ export function emptyDashboardDay(date: string): DashboardDay {
     task1: { label: "", score: null },
     task2: { label: "", score: null },
     task3: { label: "", score: null },
+    dayWin: null,
   };
 }
 

@@ -98,6 +98,7 @@ const DASHBOARD_MATCHERS: Record<string, string[]> = {
   task1Label: ["tache 1", "tache1"],
   task2Label: ["tache 2", "tache2"],
   task3Label: ["tache 3", "tache3"],
+  dayWin: ["day win", "daywin"],
 };
 
 const HEALTH_MATCHERS: Record<string, string[]> = {
@@ -138,6 +139,7 @@ function parseDashboardSheet(rows: unknown[][]): Record<string, DashboardDay> {
       "controlEmotion",
       "reading",
       "training",
+      "dayWin",
     ];
     for (const key of simpleFields) {
       const col = map.fields[key];

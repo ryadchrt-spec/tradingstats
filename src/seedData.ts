@@ -19,6 +19,7 @@ function d(
     controlEmotion: null,
     reading: null,
     training: null,
+    dayWin: null,
     ...habits,
     task1: { label: "", score: null, ...task1 },
     task2: { label: "", score: null, ...task2 },

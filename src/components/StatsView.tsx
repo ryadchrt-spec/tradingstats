@@ -14,7 +14,7 @@ import {
 import { useStore } from "../store";
 import { DASHBOARD_HABITS, HEALTH_HABITS } from "../habits";
 import { shortDateLabelFr } from "../dateUtils";
-import { average, dashboardDayWin, healthDayAverage, hasAnyDashboardData, currentStreak, daysTracked, scoreToNum } from "../compute";
+import { average, dashboardDailyAverage, healthDayAverage, hasAnyDashboardData, currentStreak, daysTracked, scoreToNum } from "../compute";
 import { useDarkMode } from "../useDarkMode";
 import { StatTile } from "./StatItem";
 import {
@@ -110,12 +110,12 @@ export function StatsView({ year, month }: { year: number; month: number }) {
   const primaryRange = useMemo(() => resolveRange(primaryPreset, data, monthAnchor), [primaryPreset, data, year, month]);
   const primaryDates = useMemo(() => rangeDates(primaryRange), [primaryRange.start, primaryRange.end]);
 
-  const primaryDayWins = useMemo(
+  const primaryDailyAverages = useMemo(
     () =>
       primaryDates.map((date) => {
         const d = data.dashboard[date];
         const hAvg = healthDayAverage(data.health[date]);
-        return hasAnyDashboardData(d) ? dashboardDayWin(d, hAvg) : null;
+        return hasAnyDashboardData(d) ? dashboardDailyAverage(d, hAvg) : null;
       }),
     [data, primaryDates.join(",")]
   );
@@ -126,12 +126,12 @@ export function StatsView({ year, month }: { year: number; month: number }) {
     [comparePreset, data, year, month, primaryRange.start, primaryRange.end]
   );
   const compareDates = useMemo(() => (compareRange ? rangeDates(compareRange) : []), [compareRange?.start, compareRange?.end]);
-  const compareDayWins = useMemo(
+  const compareDailyAverages = useMemo(
     () =>
       compareDates.map((date) => {
         const d = data.dashboard[date];
         const hAvg = healthDayAverage(data.health[date]);
-        return hasAnyDashboardData(d) ? dashboardDayWin(d, hAvg) : null;
+        return hasAnyDashboardData(d) ? dashboardDailyAverage(d, hAvg) : null;
       }),
     [data, compareDates.join(",")]
   );
@@ -141,9 +141,9 @@ export function StatsView({ year, month }: { year: number; month: number }) {
   const isDaily = primaryPreset === "month";
 
   const primaryLabelDates = chunkDates(primaryDates, targetPoints);
-  const primaryValues = chunkAverage(primaryDayWins, targetPoints).map((v) => (v === null ? null : Math.round(v * 100)));
+  const primaryValues = chunkAverage(primaryDailyAverages, targetPoints).map((v) => (v === null ? null : Math.round(v * 100)));
   const compareValues = isComparing
-    ? chunkAverage(compareDayWins, targetPoints).map((v) => (v === null ? null : Math.round(v * 100)))
+    ? chunkAverage(compareDailyAverages, targetPoints).map((v) => (v === null ? null : Math.round(v * 100)))
     : [];
 
   const lineData = primaryLabelDates.map((date, i) => ({
@@ -154,9 +154,15 @@ export function StatsView({ year, month }: { year: number; month: number }) {
 
   const { dashboardBars, healthBars } = useMemo(() => habitBreakdown(primaryDates, data), [primaryDates.join(","), data]);
 
-  const monthlyAvg = average(primaryDayWins);
-  const tracked = daysTracked(primaryDayWins);
-  const streak = currentStreak(primaryDayWins);
+  const monthlyAvg = average(primaryDailyAverages);
+  const tracked = daysTracked(primaryDailyAverages);
+  const streak = currentStreak(primaryDailyAverages);
+
+  // "Day Win" itself — the manually-checked trading outcome, kept separate from the
+  // computed daily average above (mirrors the source spreadsheet's column S).
+  const dayWinValues = primaryDates.map((date) => scoreToNum(data.dashboard[date]?.dayWin));
+  const dayWinPct = average(dayWinValues);
+  const dayWinTracked = daysTracked(dayWinValues);
 
   const allBars = [...dashboardBars, ...healthBars];
   const best = allBars.length ? allBars.reduce((a, b) => (b.value > a.value ? b : a)) : null;
@@ -195,16 +201,17 @@ export function StatsView({ year, month }: { year: number; month: number }) {
         </label>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <StatTile label="Day Win moyen" value={monthlyAvg === null ? "—" : `${Math.round(monthlyAvg * 100)}%`} sub={`${tracked}/${primaryDates.length} jours suivis`} />
-        <StatTile label="Série en cours" value={`${streak} j`} sub="Day Win ≥ 50%" />
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        <StatTile label="Moyenne journalière" value={monthlyAvg === null ? "—" : `${Math.round(monthlyAvg * 100)}%`} sub={`${tracked}/${primaryDates.length} jours suivis`} />
+        <StatTile label="Day Win" value={dayWinPct === null ? "—" : `${Math.round(dayWinPct * 100)}%`} sub={`${dayWinTracked} jour(s) coché(s)`} />
+        <StatTile label="Série en cours" value={`${streak} j`} sub="Moyenne ≥ 50%" />
         <StatTile label="Meilleure habitude" value={best ? `${best.value}%` : "—"} sub={best?.name ?? "—"} />
         <StatTile label="À travailler" value={worst ? `${worst.value}%` : "—"} sub={worst?.name ?? "—"} />
       </div>
 
       <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 p-4">
         <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-          <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Évolution du Day Win</h3>
+          <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Évolution de la moyenne journalière</h3>
           {isComparing && (
             <div className="flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400">
               <span className="flex items-center gap-1.5">

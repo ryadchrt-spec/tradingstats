@@ -20,6 +20,10 @@ export interface DashboardDay {
   task1: TaskEntry;
   task2: TaskEntry;
   task3: TaskEntry;
+  // Manually selected — "was this a winning trading day?". Not part of the
+  // computed daily/monthly average (mirrors the source spreadsheet, where
+  // this column sits outside the AVERAGE() range).
+  dayWin: Score;
 }
 
 export interface HealthDay {
@@ -44,7 +48,8 @@ export type DashboardKey =
   | "workAfternoon"
   | "controlEmotion"
   | "reading"
-  | "training";
+  | "training"
+  | "dayWin";
 
 export type HealthKey =
   | "shower"

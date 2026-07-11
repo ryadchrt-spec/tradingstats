@@ -19,8 +19,9 @@ export function healthDayAverage(h: HealthDay | undefined): number | null {
   return average(HEALTH_HABITS.map((habit) => scoreToNum(h[habit.key])));
 }
 
-// Mirrors the spreadsheet's Day Win = AVERAGE(D:R): habits + health + task scores.
-export function dashboardDayWin(
+// Mirrors the spreadsheet's Average = AVERAGE(D:R): habits + health + task scores.
+// Deliberately excludes "dayWin" (col S in the source), which sits outside that range.
+export function dashboardDailyAverage(
   d: DashboardDay | undefined,
   healthAvg: number | null
 ): number | null {
@@ -40,7 +41,8 @@ export function hasAnyDashboardData(d: DashboardDay | undefined): boolean {
     d.task3.score !== null ||
     d.task1.label.trim() !== "" ||
     d.task2.label.trim() !== "" ||
-    d.task3.label.trim() !== ""
+    d.task3.label.trim() !== "" ||
+    d.dayWin !== null
   );
 }
 

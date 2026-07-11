@@ -1,7 +1,7 @@
 import { useStore } from "../store";
 import { DASHBOARD_HABITS } from "../habits";
 import { daysInMonth, dayNameFr, toDateKey, isToday } from "../dateUtils";
-import { average, dashboardDayWin, healthDayAverage, formatPct, hasAnyDashboardData, scoreToNum } from "../compute";
+import { average, dashboardDailyAverage, healthDayAverage, formatPct, hasAnyDashboardData, scoreToNum } from "../compute";
 import { ScoreCell } from "./ScoreCell";
 import type { DashboardKey } from "../types";
 
@@ -13,12 +13,12 @@ export function DashboardTable({ year, month }: { year: number; month: number })
   const nDays = daysInMonth(year, month);
   const dates = Array.from({ length: nDays }, (_, i) => toDateKey(year, month, i + 1));
 
-  const dayWins = dates.map((date) => {
+  const dailyAverages = dates.map((date) => {
     const d = data.dashboard[date];
     const hAvg = healthDayAverage(data.health[date]);
-    return hasAnyDashboardData(d) ? dashboardDayWin(d, hAvg) : null;
+    return hasAnyDashboardData(d) ? dashboardDailyAverage(d, hAvg) : null;
   });
-  const monthlyDayWin = average(dayWins);
+  const monthlyAverage = average(dailyAverages);
 
   const monthlyHabitAverages = DASHBOARD_HABITS.map((habit) =>
     average(dates.map((date) => scoreToNum(data.dashboard[date]?.[habit.key])))
@@ -32,6 +32,7 @@ export function DashboardTable({ year, month }: { year: number; month: number })
       })
     )
   );
+  const monthlyDayWin = average(dates.map((date) => scoreToNum(data.dashboard[date]?.dayWin)));
 
   return (
     <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-800">
@@ -40,7 +41,7 @@ export function DashboardTable({ year, month }: { year: number; month: number })
           <tr className="bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wide">
             <th className="sticky left-0 z-10 bg-slate-50 dark:bg-slate-900 px-3 py-2 text-left font-medium min-w-[110px]">Jour</th>
             <th className="px-3 py-2 text-left font-medium min-w-[70px]">Date</th>
-            <th className="px-3 py-2 text-left font-medium min-w-[70px]">Day Win</th>
+            <th className="px-3 py-2 text-left font-medium min-w-[70px]">Moyenne</th>
             {DASHBOARD_HABITS.map((h) => (
               <th key={h.key} className="px-2 py-2 text-center font-medium min-w-[80px]">
                 {h.short}
@@ -50,11 +51,12 @@ export function DashboardTable({ year, month }: { year: number; month: number })
             <th className="px-2 py-2 text-left font-medium min-w-[220px]">Tâche 1</th>
             <th className="px-2 py-2 text-left font-medium min-w-[220px]">Tâche 2</th>
             <th className="px-2 py-2 text-left font-medium min-w-[220px]">Tâche 3</th>
+            <th className="px-2 py-2 text-center font-medium min-w-[80px]">Day Win</th>
           </tr>
           <tr className="bg-slate-100 dark:bg-slate-800/70 text-slate-700 dark:text-slate-200 text-xs font-semibold">
             <th className="sticky left-0 z-10 bg-slate-100 dark:bg-slate-800/70 px-3 py-2 text-left">Moyenne du mois</th>
             <th className="px-3 py-2"></th>
-            <th className="px-3 py-2 text-left tabular-nums">{formatPct(monthlyDayWin)}</th>
+            <th className="px-3 py-2 text-left tabular-nums">{formatPct(monthlyAverage)}</th>
             {monthlyHabitAverages.map((v, i) => (
               <th key={i} className="px-2 py-2 text-center tabular-nums font-normal">
                 {formatPct(v)}
@@ -66,6 +68,7 @@ export function DashboardTable({ year, month }: { year: number; month: number })
                 {formatPct(v)}
               </th>
             ))}
+            <th className="px-2 py-2 text-center tabular-nums font-normal">{formatPct(monthlyDayWin)}</th>
           </tr>
         </thead>
         <tbody>
@@ -75,7 +78,7 @@ export function DashboardTable({ year, month }: { year: number; month: number })
             const isWeekend = dName === "dimanche" || dName === "samedi";
             const d = data.dashboard[date];
             const hAvg = healthDayAverage(data.health[date]);
-            const win = hasAnyDashboardData(d) ? dashboardDayWin(d, hAvg) : null;
+            const dailyAvg = hasAnyDashboardData(d) ? dashboardDailyAverage(d, hAvg) : null;
             const today = isToday(date);
             return (
               <tr
@@ -88,7 +91,7 @@ export function DashboardTable({ year, month }: { year: number; month: number })
                   {dName}
                 </td>
                 <td className="px-3 py-1.5 text-slate-500 dark:text-slate-400 tabular-nums">{day}</td>
-                <td className="px-3 py-1.5 tabular-nums text-slate-700 dark:text-slate-200 font-medium">{formatPct(win)}</td>
+                <td className="px-3 py-1.5 tabular-nums text-slate-700 dark:text-slate-200 font-medium">{formatPct(dailyAvg)}</td>
                 {DASHBOARD_HABITS.map((h) => (
                   <td key={h.key} className="px-2 py-1.5 text-center">
                     <div className="flex justify-center">
@@ -123,6 +126,14 @@ export function DashboardTable({ year, month }: { year: number; month: number })
                     </td>
                   );
                 })}
+                <td className="px-2 py-1.5 text-center">
+                  <div className="flex justify-center">
+                    <ScoreCell
+                      value={d?.dayWin ?? null}
+                      onChange={(v) => setDashboardValue(date, "dayWin", v)}
+                    />
+                  </div>
+                </td>
               </tr>
             );
           })}
