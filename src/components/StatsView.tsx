@@ -21,6 +21,7 @@ import {
 } from "../ranges";
 
 type PrimarySelection = RangePreset | "custom";
+type CompareSelection = RangePreset | "none" | "custom";
 
 function habitBreakdown(
   dates: string[],
@@ -51,9 +52,11 @@ export function StatsView({ year, month }: { year: number; month: number }) {
   const c = dark ? COLORS.dark : COLORS.light;
 
   const [primaryPreset, setPrimaryPreset] = useState<PrimarySelection>("month");
-  const [comparePreset, setComparePreset] = useState<RangePreset | "none">("none");
+  const [comparePreset, setComparePreset] = useState<CompareSelection>("none");
   const [customStart, setCustomStart] = useState<string>(() => addDaysToKey(todayKey(), -29));
   const [customEnd, setCustomEnd] = useState<string>(() => todayKey());
+  const [compareCustomStart, setCompareCustomStart] = useState<string>(() => addDaysToKey(todayKey(), -59));
+  const [compareCustomEnd, setCompareCustomEnd] = useState<string>(() => addDaysToKey(todayKey(), -30));
 
   const monthAnchor = { year, month };
 
@@ -76,10 +79,15 @@ export function StatsView({ year, month }: { year: number; month: number }) {
   );
 
   const isComparing = comparePreset !== "none";
-  const compareRange = useMemo(
-    () => (isComparing ? resolveRange(comparePreset as RangePreset, data, monthAnchor, primaryRange) : null),
-    [comparePreset, data, year, month, primaryRange.start, primaryRange.end]
-  );
+  const compareRange: DateRange | null = useMemo(() => {
+    if (!isComparing) return null;
+    if (comparePreset === "custom") {
+      return compareCustomStart <= compareCustomEnd
+        ? { start: compareCustomStart, end: compareCustomEnd }
+        : { start: compareCustomEnd, end: compareCustomStart };
+    }
+    return resolveRange(comparePreset as RangePreset, data, monthAnchor, primaryRange);
+  }, [comparePreset, data, year, month, primaryRange.start, primaryRange.end, compareCustomStart, compareCustomEnd]);
   const compareDates = useMemo(() => (compareRange ? rangeDates(compareRange) : []), [compareRange?.start, compareRange?.end]);
   const compareDailyAverages = useMemo(
     () =>
@@ -166,7 +174,7 @@ export function StatsView({ year, month }: { year: number; month: number }) {
           Comparer avec
           <select
             value={comparePreset}
-            onChange={(e) => setComparePreset(e.target.value as RangePreset | "none")}
+            onChange={(e) => setComparePreset(e.target.value as CompareSelection)}
             className="rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1 text-sm text-slate-700 dark:text-slate-200"
           >
             {COMPARE_PRESETS.map((p) => (
@@ -174,8 +182,29 @@ export function StatsView({ year, month }: { year: number; month: number }) {
                 {p.label}
               </option>
             ))}
+            <option value="custom">Personnalisé…</option>
           </select>
         </label>
+
+        {comparePreset === "custom" && (
+          <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+            <input
+              type="date"
+              value={compareCustomStart}
+              max={compareCustomEnd}
+              onChange={(e) => setCompareCustomStart(e.target.value)}
+              className="rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1 text-sm text-slate-700 dark:text-slate-200"
+            />
+            <span className="text-slate-400">→</span>
+            <input
+              type="date"
+              value={compareCustomEnd}
+              min={compareCustomStart}
+              onChange={(e) => setCompareCustomEnd(e.target.value)}
+              className="rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1 text-sm text-slate-700 dark:text-slate-200"
+            />
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
@@ -197,7 +226,7 @@ export function StatsView({ year, month }: { year: number; month: number }) {
               </span>
               <span className="flex items-center gap-1.5">
                 <span className="h-2 w-2 rounded-full inline-block" style={{ background: c.series2 }} />
-                {COMPARE_PRESETS.find((p) => p.key === comparePreset)?.label ?? "Comparaison"}
+                {comparePreset === "custom" ? "Personnalisé" : COMPARE_PRESETS.find((p) => p.key === comparePreset)?.label}
               </span>
             </div>
           )}
