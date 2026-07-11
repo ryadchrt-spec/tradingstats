@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
-import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, BarChart, Bar, Cell } from "recharts";
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, BarChart, Bar, LabelList } from "recharts";
 import { useStore } from "../store";
+import type { AppData } from "../types";
 import { DASHBOARD_HABITS, HEALTH_HABITS } from "../habits";
 import { shortDateLabelFr, todayKey, addDaysToKey } from "../dateUtils";
 import { average, dashboardDailyAverage, healthDayAverage, hasAnyDashboardData, currentStreak, daysTracked, scoreToNum } from "../compute";
@@ -44,6 +45,50 @@ function habitBreakdown(
     .map((b) => ({ ...b, value: Math.round((b.value as number) * 100) }));
 
   return { dashboardBars, healthBars };
+}
+
+interface CombinedBar {
+  name: string;
+  primary: number | null;
+  compareVal: number | null;
+  diffLabel: string;
+}
+
+function toCombinedBar(name: string, primaryRatio: number | null, compareRatio: number | null): CombinedBar {
+  const primary = primaryRatio === null ? null : Math.round(primaryRatio * 100);
+  const compareVal = compareRatio === null ? null : Math.round(compareRatio * 100);
+  const diff = primary !== null && compareVal !== null ? primary - compareVal : null;
+  return { name, primary, compareVal, diffLabel: diff === null ? "" : `${diff > 0 ? "+" : ""}${diff}%` };
+}
+
+// Same category set as habitBreakdown, but keeps every habit that has data in
+// EITHER period (not just the primary one) so a comparison bar never goes missing,
+// and attaches the compare period's value + the delta for the "diff" label.
+function combinedHabitBreakdown(
+  primaryDates: string[],
+  compareDates: string[],
+  data: AppData
+): { dashboardBars: CombinedBar[]; healthBars: CombinedBar[] } {
+  function build(habits: { key: string; short: string }[], source: "dashboard" | "health"): CombinedBar[] {
+    const valueAt = (date: string, key: string) => {
+      const day = (source === "dashboard" ? data.dashboard[date] : data.health[date]) as unknown as Record<string, unknown> | undefined;
+      return scoreToNum(day?.[key] as Parameters<typeof scoreToNum>[0]);
+    };
+    return habits
+      .map((h) => ({
+        name: h.short,
+        primary: average(primaryDates.map((d) => valueAt(d, h.key))),
+        compare: compareDates.length ? average(compareDates.map((d) => valueAt(d, h.key))) : null,
+      }))
+      .filter((r) => r.primary !== null || r.compare !== null)
+      .sort((a, b) => (b.primary ?? -1) - (a.primary ?? -1))
+      .map((r) => toCombinedBar(r.name, r.primary, r.compare));
+  }
+
+  return {
+    dashboardBars: build(DASHBOARD_HABITS, "dashboard"),
+    healthBars: build(HEALTH_HABITS, "health"),
+  };
 }
 
 export function StatsView({ year, month }: { year: number; month: number }) {
@@ -116,6 +161,10 @@ export function StatsView({ year, month }: { year: number; month: number }) {
   }));
 
   const { dashboardBars, healthBars } = useMemo(() => habitBreakdown(primaryDates, data), [primaryDates.join(","), data]);
+  const { dashboardBars: dashboardChartBars, healthBars: healthChartBars } = useMemo(
+    () => combinedHabitBreakdown(primaryDates, isComparing ? compareDates : [], data),
+    [primaryDates.join(","), isComparing, compareDates.join(","), data]
+  );
 
   const monthlyAvg = average(primaryDailyAverages);
   const tracked = daysTracked(primaryDailyAverages);
@@ -130,6 +179,21 @@ export function StatsView({ year, month }: { year: number; month: number }) {
   const allBars = [...dashboardBars, ...healthBars];
   const best = allBars.length ? allBars.reduce((a, b) => (b.value > a.value ? b : a)) : null;
   const worst = allBars.length ? allBars.reduce((a, b) => (b.value < a.value ? b : a)) : null;
+
+  const primaryLabel = primaryPreset === "custom" ? "Personnalisé" : RANGE_PRESETS.find((p) => p.key === primaryPreset)?.label;
+  const compareLabel = comparePreset === "custom" ? "Personnalisé" : COMPARE_PRESETS.find((p) => p.key === comparePreset)?.label;
+  const compareLegend = isComparing ? (
+    <div className="flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400">
+      <span className="flex items-center gap-1.5">
+        <span className="h-2 w-2 rounded-full inline-block" style={{ background: c.series1 }} />
+        {primaryLabel}
+      </span>
+      <span className="flex items-center gap-1.5">
+        <span className="h-2 w-2 rounded-full inline-block" style={{ background: c.series2 }} />
+        {compareLabel}
+      </span>
+    </div>
+  ) : null;
 
   return (
     <div className="flex flex-col gap-6">
@@ -218,18 +282,7 @@ export function StatsView({ year, month }: { year: number; month: number }) {
       <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 p-4">
         <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
           <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Évolution de la moyenne journalière</h3>
-          {isComparing && (
-            <div className="flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400">
-              <span className="flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full inline-block" style={{ background: c.series1 }} />
-                {primaryPreset === "custom" ? "Personnalisé" : RANGE_PRESETS.find((p) => p.key === primaryPreset)?.label}
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full inline-block" style={{ background: c.series2 }} />
-                {comparePreset === "custom" ? "Personnalisé" : COMPARE_PRESETS.find((p) => p.key === comparePreset)?.label}
-              </span>
-            </div>
-          )}
+          {compareLegend}
         </div>
         <ResponsiveContainer width="100%" height={220}>
           <LineChart data={lineData} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
@@ -280,35 +333,43 @@ export function StatsView({ year, month }: { year: number; month: number }) {
 
       <div className="grid md:grid-cols-2 gap-4">
         <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 p-4">
-          <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3">Habitudes — Dashboard</h3>
-          <ResponsiveContainer width="100%" height={Math.max(160, dashboardBars.length * 32)}>
-            <BarChart data={dashboardBars} layout="vertical" margin={{ top: 0, right: 24, left: 0, bottom: 0 }} barCategoryGap={6}>
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+            <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Habitudes — Dashboard</h3>
+            {compareLegend}
+          </div>
+          <ResponsiveContainer width="100%" height={Math.max(160, dashboardChartBars.length * (isComparing ? 42 : 32))}>
+            <BarChart data={dashboardChartBars} layout="vertical" margin={{ top: 0, right: 44, left: 0, bottom: 0 }} barCategoryGap={isComparing ? "30%" : 6}>
               <CartesianGrid horizontal={false} stroke={c.grid} />
               <XAxis type="number" domain={[0, 100]} tick={{ fill: c.axis, fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v}%`} />
               <YAxis type="category" dataKey="name" tick={{ fill: c.secondary, fontSize: 12 }} axisLine={false} tickLine={false} width={90} />
               <Tooltip content={<ChartTooltip dark={dark} unit="%" />} cursor={{ fill: dark ? "rgba(255,255,255,0.04)" : "rgba(11,11,11,0.03)" }} />
-              <Bar dataKey="value" radius={[0, 4, 4, 0]} maxBarSize={16}>
-                {dashboardBars.map((_, i) => (
-                  <Cell key={i} fill={c.series1} />
-                ))}
-              </Bar>
+              <Bar dataKey="primary" fill={c.series1} radius={[0, 4, 4, 0]} maxBarSize={isComparing ? 12 : 16} />
+              {isComparing && (
+                <Bar dataKey="compareVal" fill={c.series2} radius={[0, 4, 4, 0]} maxBarSize={12}>
+                  <LabelList dataKey="diffLabel" position="right" style={{ fill: c.secondary, fontSize: 11 }} />
+                </Bar>
+              )}
             </BarChart>
           </ResponsiveContainer>
         </div>
 
         <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 p-4">
-          <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3">Habitudes — Health</h3>
-          <ResponsiveContainer width="100%" height={Math.max(160, healthBars.length * 32)}>
-            <BarChart data={healthBars} layout="vertical" margin={{ top: 0, right: 24, left: 0, bottom: 0 }} barCategoryGap={6}>
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+            <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Habitudes — Health</h3>
+            {compareLegend}
+          </div>
+          <ResponsiveContainer width="100%" height={Math.max(160, healthChartBars.length * (isComparing ? 42 : 32))}>
+            <BarChart data={healthChartBars} layout="vertical" margin={{ top: 0, right: 44, left: 0, bottom: 0 }} barCategoryGap={isComparing ? "30%" : 6}>
               <CartesianGrid horizontal={false} stroke={c.grid} />
               <XAxis type="number" domain={[0, 100]} tick={{ fill: c.axis, fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v}%`} />
               <YAxis type="category" dataKey="name" tick={{ fill: c.secondary, fontSize: 12 }} axisLine={false} tickLine={false} width={90} />
               <Tooltip content={<ChartTooltip dark={dark} unit="%" />} cursor={{ fill: dark ? "rgba(255,255,255,0.04)" : "rgba(11,11,11,0.03)" }} />
-              <Bar dataKey="value" radius={[0, 4, 4, 0]} maxBarSize={16}>
-                {healthBars.map((_, i) => (
-                  <Cell key={i} fill={c.series1} />
-                ))}
-              </Bar>
+              <Bar dataKey="primary" fill={c.series1} radius={[0, 4, 4, 0]} maxBarSize={isComparing ? 12 : 16} />
+              {isComparing && (
+                <Bar dataKey="compareVal" fill={c.series2} radius={[0, 4, 4, 0]} maxBarSize={12}>
+                  <LabelList dataKey="diffLabel" position="right" style={{ fill: c.secondary, fontSize: 11 }} />
+                </Bar>
+              )}
             </BarChart>
           </ResponsiveContainer>
         </div>
