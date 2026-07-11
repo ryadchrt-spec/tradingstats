@@ -3,13 +3,15 @@ import { MonthNav } from "./components/MonthNav";
 import { DashboardTable } from "./components/DashboardTable";
 import { HealthTable } from "./components/HealthTable";
 import { StatsView } from "./components/StatsView";
+import { CaloriesPage } from "./components/CaloriesPage";
 import { Toolbar } from "./components/Toolbar";
 
-type Tab = "dashboard" | "health" | "stats";
+type Tab = "dashboard" | "health" | "calories" | "stats";
 
 const TABS: { key: Tab; label: string }[] = [
   { key: "dashboard", label: "Dashboard" },
   { key: "health", label: "Health" },
+  { key: "calories", label: "Calories" },
   { key: "stats", label: "Statistiques" },
 ];
 
@@ -54,6 +56,7 @@ export default function App() {
         <main>
           {tab === "dashboard" && <DashboardTable year={year} month={month} />}
           {tab === "health" && <HealthTable year={year} month={month} />}
+          {tab === "calories" && <CaloriesPage year={year} month={month} />}
           {tab === "stats" && <StatsView year={year} month={month} />}
         </main>
 

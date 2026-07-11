@@ -63,7 +63,33 @@ export type HealthKey =
   | "morningRoutine"
   | "noSmoke";
 
+export interface CalorieDay {
+  date: string; // YYYY-MM-DD
+  weight: number | null; // kg
+  breakfast: number | null; // kcal — "Matin"
+  lunch: number | null; // kcal — "Midi"
+  dinner: number | null; // kcal — "Soir"
+  other: number | null; // kcal — "Autre" (snacks, etc.)
+  protein: number | null; // g consumed
+}
+
+export type CalorieMealKey = "breakfast" | "lunch" | "dinner" | "other";
+
+export type Sex = "M" | "F";
+
+export interface Profile {
+  heightCm: number;
+  age: number;
+  sex: Sex;
+  // Mifflin-St Jeor activity multiplier: 1.2 sedentary … 1.9 very active.
+  activityMultiplier: number;
+  // Protein target in grams per kg of bodyweight.
+  proteinPerKg: number;
+}
+
 export interface AppData {
   dashboard: Record<string, DashboardDay>;
   health: Record<string, HealthDay>;
+  calories: Record<string, CalorieDay>;
+  profile: Profile;
 }

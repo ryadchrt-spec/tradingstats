@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { useStore } from "../store";
 import type { AppData } from "../types";
 import { parseWorkbookFile } from "../excelImport";
+import { defaultProfile } from "../emptyRecords";
 
 export function Toolbar() {
   const data = useStore((s) => s.data);
@@ -30,9 +31,16 @@ export function Toolbar() {
     if (!file) return;
     try {
       const text = await file.text();
-      const parsed = JSON.parse(text) as AppData;
+      const parsed = JSON.parse(text) as Partial<AppData>;
       if (!parsed.dashboard || !parsed.health) throw new Error("format invalide");
-      importData(parsed);
+      // Older exports predate the calories/profile fields — backfill them so
+      // the store always has a complete AppData shape.
+      importData({
+        dashboard: parsed.dashboard,
+        health: parsed.health,
+        calories: parsed.calories ?? {},
+        profile: parsed.profile ?? defaultProfile(),
+      });
     } catch {
       alert("Fichier JSON invalide.");
     } finally {

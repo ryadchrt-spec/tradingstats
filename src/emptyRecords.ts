@@ -1,4 +1,4 @@
-import type { DashboardDay, HealthDay } from "./types";
+import type { CalorieDay, DashboardDay, HealthDay, Profile } from "./types";
 
 export function emptyDashboardDay(date: string): DashboardDay {
   return {
@@ -31,5 +31,27 @@ export function emptyHealthDay(date: string): HealthDay {
     tracking: null,
     morningRoutine: null,
     noSmoke: null,
+  };
+}
+
+export function emptyCalorieDay(date: string): CalorieDay {
+  return {
+    date,
+    weight: null,
+    breakfast: null,
+    lunch: null,
+    dinner: null,
+    other: null,
+    protein: null,
+  };
+}
+
+export function defaultProfile(): Profile {
+  return {
+    heightCm: 170,
+    age: 25,
+    sex: "M",
+    activityMultiplier: 1.2,
+    proteinPerKg: 2,
   };
 }

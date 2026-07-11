@@ -1,0 +1,79 @@
+import { useState } from "react";
+import { useStore } from "../store";
+import { ACTIVITY_LEVELS } from "../calorieCompute";
+import type { Sex } from "../types";
+
+export function ProfileSettings() {
+  const profile = useStore((s) => s.data.profile);
+  const setProfile = useStore((s) => s.setProfile);
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center justify-between px-4 py-3 text-sm font-semibold text-slate-700 dark:text-slate-200"
+      >
+        <span>Profil (utilisé pour calculer ton métabolisme et ton objectif protéine)</span>
+        <span className="text-slate-400 text-xs">{open ? "Masquer ▲" : "Modifier ▼"}</span>
+      </button>
+      {open && (
+        <div className="px-4 pb-4 grid grid-cols-2 md:grid-cols-5 gap-3">
+          <label className="flex flex-col gap-1 text-xs text-slate-500 dark:text-slate-400">
+            Taille (cm)
+            <input
+              type="number"
+              value={profile.heightCm}
+              onChange={(e) => setProfile({ heightCm: Number(e.target.value) })}
+              className="rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1 text-sm text-slate-700 dark:text-slate-200"
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-xs text-slate-500 dark:text-slate-400">
+            Âge
+            <input
+              type="number"
+              value={profile.age}
+              onChange={(e) => setProfile({ age: Number(e.target.value) })}
+              className="rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1 text-sm text-slate-700 dark:text-slate-200"
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-xs text-slate-500 dark:text-slate-400">
+            Sexe
+            <select
+              value={profile.sex}
+              onChange={(e) => setProfile({ sex: e.target.value as Sex })}
+              className="rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1 text-sm text-slate-700 dark:text-slate-200"
+            >
+              <option value="M">Homme</option>
+              <option value="F">Femme</option>
+            </select>
+          </label>
+          <label className="flex flex-col gap-1 text-xs text-slate-500 dark:text-slate-400 col-span-2 md:col-span-1">
+            Niveau d'activité
+            <select
+              value={profile.activityMultiplier}
+              onChange={(e) => setProfile({ activityMultiplier: Number(e.target.value) })}
+              className="rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1 text-sm text-slate-700 dark:text-slate-200"
+            >
+              {ACTIVITY_LEVELS.map((a) => (
+                <option key={a.value} value={a.value}>
+                  {a.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex flex-col gap-1 text-xs text-slate-500 dark:text-slate-400">
+            Protéine (g/kg)
+            <input
+              type="number"
+              step={0.1}
+              value={profile.proteinPerKg}
+              onChange={(e) => setProfile({ proteinPerKg: Number(e.target.value) })}
+              className="rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1 text-sm text-slate-700 dark:text-slate-200"
+            />
+          </label>
+        </div>
+      )}
+    </div>
+  );
+}
