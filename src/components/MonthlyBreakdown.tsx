@@ -111,16 +111,15 @@ function MiniMonthChart({
   dark: boolean;
 }) {
   const c = dark ? COLORS.dark : COLORS.light;
+  const tickInterval = data.length > 8 ? 1 : 0;
   return (
     <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 p-3">
       <div className="text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">{title}</div>
-      <ResponsiveContainer width="100%" height={100}>
-        <BarChart data={data} margin={{ top: 4, right: 4, left: -20, bottom: 0 }} barCategoryGap="25%" barGap={0}>
+      <ResponsiveContainer width="100%" height={130}>
+        <BarChart data={data} margin={{ top: 4, right: 4, left: 0, bottom: 0 }} barCategoryGap="25%" barGap={0}>
           <CartesianGrid vertical={false} stroke={c.grid} />
-          {/* Month labels are shown once in "Moyenne par mois" above; repeating them
-              on every mini chart just collides, so rely on the hover tooltip instead. */}
-          <XAxis dataKey="month" tick={false} axisLine={{ stroke: c.grid }} tickLine={false} />
-          <YAxis domain={[0, 100]} ticks={[0, 100]} tick={{ fill: c.axis, fontSize: 9 }} axisLine={false} tickLine={false} width={26} tickFormatter={(v) => `${v}%`} />
+          <XAxis dataKey="month" tick={{ fill: c.axis, fontSize: 8 }} axisLine={{ stroke: c.grid }} tickLine={false} interval={tickInterval} />
+          <YAxis domain={[0, 100]} ticks={[0, 25, 50, 75, 100]} tick={{ fill: c.axis, fontSize: 8 }} axisLine={false} tickLine={false} width={30} tickFormatter={(v) => `${v}%`} />
           <Tooltip content={<ChartTooltip dark={dark} unit="%" />} cursor={{ fill: dark ? "rgba(255,255,255,0.04)" : "rgba(11,11,11,0.03)" }} />
           <Bar dataKey="primary" fill={color} radius={[3, 3, 0, 0]} maxBarSize={isComparing ? 14 : 28} />
           {isComparing && <Bar dataKey="compareVal" fill={compareColor} radius={[3, 3, 0, 0]} maxBarSize={14} />}
