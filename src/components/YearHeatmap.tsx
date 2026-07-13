@@ -108,42 +108,48 @@ export function YearHeatmap() {
         </div>
       </div>
 
-      <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 p-4 overflow-x-auto">
+      <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 p-4">
         <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3">Vue par année — moyenne journalière</h3>
-        <div className="inline-flex flex-col gap-1 min-w-max">
-          <div className="flex gap-[3px] ml-8">
-            {weeks.map((_, wi) => {
-              const label = monthLabels.find((m) => m.weekIndex === wi)?.label;
-              return (
-                <div key={wi} className="w-[13px] text-[9px] text-slate-400 dark:text-slate-500 shrink-0 whitespace-nowrap">
-                  {label ?? ""}
-                </div>
-              );
-            })}
+        {/* Week columns stretch to fill the card's full width (1fr each) instead
+            of a fixed small cell size, so the grid uses the whole box. */}
+        <div className="flex flex-col gap-1 w-full">
+          <div className="flex gap-[3px] pl-8">
+            <div className="grid flex-1 gap-[3px]" style={{ gridTemplateColumns: `repeat(${weeks.length}, minmax(0, 1fr))` }}>
+              {weeks.map((_, wi) => {
+                const label = monthLabels.find((m) => m.weekIndex === wi)?.label;
+                return (
+                  <div key={wi} className="text-[9px] text-slate-400 dark:text-slate-500 whitespace-nowrap overflow-visible">
+                    {label ?? ""}
+                  </div>
+                );
+              })}
+            </div>
           </div>
-          <div className="flex gap-[3px]">
+          <div className="flex gap-[3px] w-full">
             <div className="flex flex-col gap-[3px] w-7 shrink-0">
               {DAY_ROW_LABELS.map((label, i) => (
-                <div key={i} className="h-[13px] text-[9px] leading-[13px] text-slate-400 dark:text-slate-500">
+                <div key={i} className="flex-1 text-[9px] flex items-center text-slate-400 dark:text-slate-500">
                   {label}
                 </div>
               ))}
             </div>
-            {weeks.map((week, wi) => (
-              <div key={wi} className="flex flex-col gap-[3px]">
-                {week.map((date, di) => {
-                  const pct = date ? dayPct.get(date) ?? null : null;
-                  return (
-                    <div
-                      key={di}
-                      title={date ? `${date} : ${pct === null ? "pas de données" : `${pct}%`}` : undefined}
-                      className="h-[13px] w-[13px] rounded-sm"
-                      style={{ background: date ? bucketColor(pct, colors) : "transparent" }}
-                    />
-                  );
-                })}
-              </div>
-            ))}
+            <div className="grid flex-1 gap-[3px]" style={{ gridTemplateColumns: `repeat(${weeks.length}, minmax(0, 1fr))` }}>
+              {weeks.map((week, wi) => (
+                <div key={wi} className="flex flex-col gap-[3px]">
+                  {week.map((date, di) => {
+                    const pct = date ? dayPct.get(date) ?? null : null;
+                    return (
+                      <div
+                        key={di}
+                        title={date ? `${date} : ${pct === null ? "pas de données" : `${pct}%`}` : undefined}
+                        className="w-full aspect-square rounded-sm"
+                        style={{ background: date ? bucketColor(pct, colors) : "transparent" }}
+                      />
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
         <div className="flex items-center gap-1.5 mt-3 text-[10px] text-slate-400 dark:text-slate-500">

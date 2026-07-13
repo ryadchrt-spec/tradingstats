@@ -43,6 +43,14 @@ export function HabitColumnManager({
       </button>
       {open && (
         <div className="px-4 pb-4 flex flex-col gap-2">
+          {habits.length > 0 && (
+            <div className="flex items-center gap-2 text-[11px] uppercase tracking-wide text-slate-400 dark:text-slate-500">
+              <div className="w-4 shrink-0" />
+              <div className="flex-1">Nom</div>
+              <div className="w-24 shrink-0">Objectif %</div>
+              <div className="w-7 shrink-0" />
+            </div>
+          )}
           {habits.map((h, i) => (
             <div key={h.id} className="flex items-center gap-2">
               <div className="flex flex-col">

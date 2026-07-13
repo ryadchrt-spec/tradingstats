@@ -37,12 +37,12 @@ export default function App() {
         </header>
 
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <nav className="flex gap-1 rounded-lg border border-slate-200 dark:border-slate-800 p-1 bg-white dark:bg-slate-900 w-fit">
+          <nav className="flex gap-1 rounded-lg border border-slate-200 dark:border-slate-800 p-1 bg-white dark:bg-slate-900 max-w-full overflow-x-auto">
             {TABS.map((t) => (
               <button
                 key={t.key}
                 onClick={() => setTab(t.key)}
-                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                className={`shrink-0 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
                   tab === t.key
                     ? "bg-blue-600 text-white"
                     : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
