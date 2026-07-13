@@ -15,8 +15,8 @@ import {
   COMPARE_PRESETS,
   resolveRange,
   rangeDates,
-  chunkAverage,
-  chunkDates,
+  monthBuckets,
+  tickIntervalFor,
   type RangePreset,
   type DateRange,
 } from "../ranges";
@@ -115,21 +115,36 @@ export function StatsView({ year, month }: { year: number; month: number }) {
     [data, compareDates.join(",")]
   );
 
-  // Cap points so long ranges stay readable; a single month (<=31 days) stays daily, unchanged.
-  const targetPoints = Math.min(primaryDates.length, 31) || 1;
-  const isDaily = primaryPreset === "month";
+  // The curve's granularity follows the chosen duration: a period within a
+  // single month plots daily, anything spanning 2+ calendar months plots one
+  // point per month instead (same buckets as "Moyenne par mois" below), so a
+  // multi-year "Tout" selection doesn't cram hundreds of days into one line.
+  const primaryBuckets = useMemo(() => monthBuckets(primaryDates), [primaryDates.join(",")]);
+  const compareBuckets = useMemo(() => (isComparing ? monthBuckets(compareDates) : []), [isComparing, compareDates.join(",")]);
+  const useMonthlyGranularity = primaryBuckets.length >= 2;
+  const dateIndex = useMemo(() => new Map(primaryDates.map((d, i) => [d, i])), [primaryDates.join(",")]);
+  const compareDateIndex = useMemo(() => new Map(compareDates.map((d, i) => [d, i])), [compareDates.join(",")]);
 
-  const primaryLabelDates = chunkDates(primaryDates, targetPoints);
-  const primaryValues = chunkAverage(primaryDailyAverages, targetPoints).map((v) => (v === null ? null : Math.round(v * 100)));
-  const compareValues = isComparing
-    ? chunkAverage(compareDailyAverages, targetPoints).map((v) => (v === null ? null : Math.round(v * 100)))
-    : [];
-
-  const lineData = primaryLabelDates.map((date, i) => ({
-    x: isDaily ? i + 1 : shortDateLabelFr(date),
-    primary: primaryValues[i] ?? null,
-    compare: isComparing ? compareValues[i] ?? null : undefined,
-  }));
+  const lineData = useMonthlyGranularity
+    ? primaryBuckets.map((b, i) => {
+        const primaryAvg = average(b.dates.map((d) => primaryDailyAverages[dateIndex.get(d) ?? -1] ?? null));
+        const cBucket = compareBuckets[i];
+        const compareAvg = isComparing && cBucket ? average(cBucket.dates.map((d) => compareDailyAverages[compareDateIndex.get(d) ?? -1] ?? null)) : null;
+        return {
+          x: b.label,
+          primary: primaryAvg === null ? null : Math.round(primaryAvg * 100),
+          compare: isComparing ? (compareAvg === null ? null : Math.round(compareAvg * 100)) : undefined,
+        };
+      })
+    : primaryDates.map((date, i) => {
+        const primaryVal = primaryDailyAverages[i] ?? null;
+        const compareVal = compareDailyAverages[i] ?? null;
+        return {
+          x: primaryPreset === "month" ? i + 1 : shortDateLabelFr(date),
+          primary: primaryVal === null ? null : Math.round(primaryVal * 100),
+          compare: isComparing ? (compareVal === null ? null : Math.round(compareVal * 100)) : undefined,
+        };
+      });
 
   const { dashboardBars: dashboardChartBars, healthBars: healthChartBars } = useMemo(
     () => combinedHabitBreakdown(primaryDates, isComparing ? compareDates : [], data),
@@ -289,7 +304,7 @@ export function StatsView({ year, month }: { year: number; month: number }) {
               tick={{ fill: c.axis, fontSize: 11 }}
               axisLine={{ stroke: c.grid }}
               tickLine={false}
-              interval={Math.max(0, Math.floor(lineData.length / 8))}
+              interval={tickIntervalFor(lineData.length, 8)}
             />
             <YAxis
               domain={[0, 100]}
