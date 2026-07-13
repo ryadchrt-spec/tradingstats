@@ -11,6 +11,7 @@ import { COLORS } from "../chartColors";
 import { MonthlyBreakdown } from "./MonthlyBreakdown";
 import { AnnotationManager } from "./AnnotationManager";
 import { excludeAnnotated } from "../annotations";
+import { CorrelationCard } from "./CorrelationCard";
 import {
   RANGE_PRESETS,
   COMPARE_PRESETS,
@@ -384,6 +385,8 @@ export function StatsView({ year, month }: { year: number; month: number }) {
           </ResponsiveContainer>
         </div>
       </div>
+
+      <CorrelationCard dates={primaryDates} data={data} dark={dark} />
     </div>
   );
 }
