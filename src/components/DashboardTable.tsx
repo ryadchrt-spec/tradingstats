@@ -1,14 +1,15 @@
 import { useStore } from "../store";
-import { DASHBOARD_HABITS } from "../habits";
 import { daysInMonth, dayNameFr, toDateKey, isToday } from "../dateUtils";
-import { average, dashboardDailyAverage, healthDayAverage, formatPct, hasAnyDashboardData, scoreToNum } from "../compute";
+import { average, dashboardDailyAverage, dashboardHabitValue, healthDayAverage, formatPct, hasAnyDashboardData, scoreToNum } from "../compute";
 import { ScoreCell } from "./ScoreCell";
-import type { DashboardKey } from "../types";
+import { DashboardHabitManager } from "./DashboardHabitManager";
 
 export function DashboardTable({ year, month }: { year: number; month: number }) {
   const data = useStore((s) => s.data);
   const setDashboardValue = useStore((s) => s.setDashboardValue);
+  const setDashboardHabitValue = useStore((s) => s.setDashboardHabitValue);
   const setTask = useStore((s) => s.setTask);
+  const habits = data.dashboardHabits;
 
   const nDays = daysInMonth(year, month);
   const dates = Array.from({ length: nDays }, (_, i) => toDateKey(year, month, i + 1));
@@ -16,12 +17,12 @@ export function DashboardTable({ year, month }: { year: number; month: number })
   const dailyAverages = dates.map((date) => {
     const d = data.dashboard[date];
     const hAvg = healthDayAverage(data.health[date]);
-    return hasAnyDashboardData(d) ? dashboardDailyAverage(d, hAvg) : null;
+    return hasAnyDashboardData(d, habits) ? dashboardDailyAverage(d, hAvg, habits) : null;
   });
   const monthlyAverage = average(dailyAverages);
 
-  const monthlyHabitAverages = DASHBOARD_HABITS.map((habit) =>
-    average(dates.map((date) => scoreToNum(data.dashboard[date]?.[habit.key])))
+  const monthlyHabitAverages = habits.map((habit) =>
+    average(dates.map((date) => scoreToNum(dashboardHabitValue(data.dashboard[date], habit))))
   );
   const monthlyHealthAvg = average(dates.map((date) => healthDayAverage(data.health[date])));
   const monthlyTaskAverages = [1, 2, 3].map((i) =>
@@ -35,15 +36,17 @@ export function DashboardTable({ year, month }: { year: number; month: number })
   const monthlyDayWin = average(dates.map((date) => scoreToNum(data.dashboard[date]?.dayWin)));
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-800">
+    <div className="flex flex-col gap-4">
+      <DashboardHabitManager />
+      <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-800">
       <table className="min-w-full border-collapse text-sm">
         <thead>
           <tr className="bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wide">
             <th className="sticky left-0 z-10 bg-slate-50 dark:bg-slate-900 px-3 py-2 text-left font-medium min-w-[110px]">Jour</th>
             <th className="px-3 py-2 text-left font-medium min-w-[70px]">Date</th>
             <th className="px-3 py-2 text-left font-medium min-w-[70px]">Moyenne</th>
-            {DASHBOARD_HABITS.map((h) => (
-              <th key={h.key} className="px-2 py-2 text-center font-medium min-w-[80px]">
+            {habits.map((h) => (
+              <th key={h.id} className="px-2 py-2 text-center font-medium min-w-[80px]">
                 {h.short}
               </th>
             ))}
@@ -78,7 +81,7 @@ export function DashboardTable({ year, month }: { year: number; month: number })
             const isWeekend = dName === "dimanche" || dName === "samedi";
             const d = data.dashboard[date];
             const hAvg = healthDayAverage(data.health[date]);
-            const dailyAvg = hasAnyDashboardData(d) ? dashboardDailyAverage(d, hAvg) : null;
+            const dailyAvg = hasAnyDashboardData(d, habits) ? dashboardDailyAverage(d, hAvg, habits) : null;
             const today = isToday(date);
             return (
               <tr
@@ -92,12 +95,12 @@ export function DashboardTable({ year, month }: { year: number; month: number })
                 </td>
                 <td className="px-3 py-1.5 text-slate-500 dark:text-slate-400 tabular-nums">{day}</td>
                 <td className="px-3 py-1.5 tabular-nums text-slate-700 dark:text-slate-200 font-medium">{formatPct(dailyAvg)}</td>
-                {DASHBOARD_HABITS.map((h) => (
-                  <td key={h.key} className="px-2 py-1.5 text-center">
+                {habits.map((h) => (
+                  <td key={h.id} className="px-2 py-1.5 text-center">
                     <div className="flex justify-center">
                       <ScoreCell
-                        value={d?.[h.key] ?? null}
-                        onChange={(v) => setDashboardValue(date, h.key as DashboardKey, v)}
+                        value={dashboardHabitValue(d, h)}
+                        onChange={(v) => setDashboardHabitValue(date, h.id, v)}
                       />
                     </div>
                   </td>
@@ -139,6 +142,7 @@ export function DashboardTable({ year, month }: { year: number; month: number })
           })}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }

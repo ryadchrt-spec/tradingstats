@@ -2,9 +2,9 @@ import { useMemo, useState } from "react";
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, BarChart, Bar, LabelList } from "recharts";
 import { useStore } from "../store";
 import type { AppData } from "../types";
-import { DASHBOARD_HABITS, HEALTH_HABITS } from "../habits";
+import { HEALTH_HABITS } from "../habits";
 import { shortDateLabelFr, todayKey, currentMonthStr, shiftMonthStr, monthStrToFirstDay, monthStrToLastDay } from "../dateUtils";
-import { average, dashboardDailyAverage, healthDayAverage, hasAnyDashboardData, currentStreak, daysTracked, scoreToNum, toDiffPair, type DiffPair } from "../compute";
+import { average, dashboardDailyAverage, dashboardHabitValue, healthDayAverage, hasAnyDashboardData, currentStreak, daysTracked, scoreToNum, toDiffPair, type DiffPair } from "../compute";
 import { useDarkMode } from "../useDarkMode";
 import { StatTile } from "./StatItem";
 import { ChartTooltip } from "./ChartTooltip";
@@ -34,25 +34,20 @@ function combinedHabitBreakdown(
   compareDates: string[],
   data: AppData
 ): { dashboardBars: CombinedBar[]; healthBars: CombinedBar[] } {
-  function build(habits: { key: string; short: string }[], source: "dashboard" | "health"): CombinedBar[] {
-    const valueAt = (date: string, key: string) => {
-      const day = (source === "dashboard" ? data.dashboard[date] : data.health[date]) as unknown as Record<string, unknown> | undefined;
-      return scoreToNum(day?.[key] as Parameters<typeof scoreToNum>[0]);
-    };
-    return habits
-      .map((h) => ({
-        name: h.short,
-        primary: average(primaryDates.map((d) => valueAt(d, h.key))),
-        compare: compareDates.length ? average(compareDates.map((d) => valueAt(d, h.key))) : null,
-      }))
-      .filter((r) => r.primary !== null || r.compare !== null)
-      .sort((a, b) => (b.primary ?? -1) - (a.primary ?? -1))
-      .map((r) => ({ name: r.name, ...toDiffPair(r.primary, r.compare) }));
+  function summarize(name: string, valueAt: (date: string) => number | null): CombinedBar {
+    const primary = average(primaryDates.map(valueAt));
+    const compare = compareDates.length ? average(compareDates.map(valueAt)) : null;
+    return { name, ...toDiffPair(primary, compare) };
+  }
+  function finish(bars: CombinedBar[]): CombinedBar[] {
+    return bars.filter((r) => r.primary !== null || r.compareVal !== null).sort((a, b) => (b.primary ?? -1) - (a.primary ?? -1));
   }
 
   return {
-    dashboardBars: build(DASHBOARD_HABITS, "dashboard"),
-    healthBars: build(HEALTH_HABITS, "health"),
+    dashboardBars: finish(
+      data.dashboardHabits.map((h) => summarize(h.short, (date) => scoreToNum(dashboardHabitValue(data.dashboard[date], h))))
+    ),
+    healthBars: finish(HEALTH_HABITS.map((h) => summarize(h.short, (date) => scoreToNum(data.health[date]?.[h.key])))),
   };
 }
 
@@ -86,7 +81,7 @@ export function StatsView({ year, month }: { year: number; month: number }) {
       primaryDates.map((date) => {
         const d = data.dashboard[date];
         const hAvg = healthDayAverage(data.health[date]);
-        return hasAnyDashboardData(d) ? dashboardDailyAverage(d, hAvg) : null;
+        return hasAnyDashboardData(d, data.dashboardHabits) ? dashboardDailyAverage(d, hAvg, data.dashboardHabits) : null;
       }),
     [data, primaryDates.join(",")]
   );
@@ -110,7 +105,7 @@ export function StatsView({ year, month }: { year: number; month: number }) {
       compareDates.map((date) => {
         const d = data.dashboard[date];
         const hAvg = healthDayAverage(data.health[date]);
-        return hasAnyDashboardData(d) ? dashboardDailyAverage(d, hAvg) : null;
+        return hasAnyDashboardData(d, data.dashboardHabits) ? dashboardDailyAverage(d, hAvg, data.dashboardHabits) : null;
       }),
     [data, compareDates.join(",")]
   );

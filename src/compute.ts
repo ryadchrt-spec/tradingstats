@@ -1,5 +1,5 @@
-import type { DashboardDay, HealthDay, Score } from "./types";
-import { DASHBOARD_HABITS, HEALTH_HABITS } from "./habits";
+import type { DashboardDay, DashboardHabitDef, HealthDay, Score } from "./types";
+import { HEALTH_HABITS } from "./habits";
 
 export function average(values: (number | null | undefined)[]): number | null {
   const nums = values.filter((v): v is number => v !== null && v !== undefined);
@@ -19,23 +19,33 @@ export function healthDayAverage(h: HealthDay | undefined): number | null {
   return average(HEALTH_HABITS.map((habit) => scoreToNum(h[habit.key])));
 }
 
+// Builtin habits live on their own DashboardDay field (named after the habit
+// id); custom ones live in customHabits[id]. This is the single place that
+// knows how to read either, so callers never need to branch on `builtin`.
+export function dashboardHabitValue(d: DashboardDay | undefined, habit: DashboardHabitDef): Score {
+  if (!d) return null;
+  if (habit.builtin) return (d as unknown as Record<string, Score>)[habit.id] ?? null;
+  return d.customHabits?.[habit.id] ?? null;
+}
+
 // Mirrors the spreadsheet's Average = AVERAGE(D:R): habits + health + task scores.
 // Deliberately excludes "dayWin" (col S in the source), which sits outside that range.
 export function dashboardDailyAverage(
   d: DashboardDay | undefined,
-  healthAvg: number | null
+  healthAvg: number | null,
+  habits: DashboardHabitDef[]
 ): number | null {
   if (!d) return null;
-  const values: (number | null)[] = DASHBOARD_HABITS.map((habit) => scoreToNum(d[habit.key]));
+  const values: (number | null)[] = habits.map((habit) => scoreToNum(dashboardHabitValue(d, habit)));
   values.push(healthAvg);
   values.push(scoreToNum(d.task1.score), scoreToNum(d.task2.score), scoreToNum(d.task3.score));
   return average(values);
 }
 
-export function hasAnyDashboardData(d: DashboardDay | undefined): boolean {
+export function hasAnyDashboardData(d: DashboardDay | undefined, habits: DashboardHabitDef[]): boolean {
   if (!d) return false;
   return (
-    DASHBOARD_HABITS.some((h) => d[h.key] !== null) ||
+    habits.some((h) => dashboardHabitValue(d, h) !== null) ||
     d.task1.score !== null ||
     d.task2.score !== null ||
     d.task3.score !== null ||

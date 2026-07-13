@@ -12,11 +12,20 @@ import type {
   TaskEntry,
 } from "./types";
 import { buildSeedData } from "./seedData";
-import { emptyDashboardDay, emptyHealthDay, emptyCalorieDay, defaultProfile } from "./emptyRecords";
+import { emptyDashboardDay, emptyHealthDay, emptyCalorieDay, defaultProfile, defaultDashboardHabits } from "./emptyRecords";
+
+function makeHabitId(): string {
+  return `custom_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+}
 
 interface Store {
   data: AppData;
   setDashboardValue: (date: string, key: DashboardKey, value: Score) => void;
+  setDashboardHabitValue: (date: string, habitId: string, value: Score) => void;
+  addDashboardHabit: (short: string) => void;
+  removeDashboardHabit: (id: string) => void;
+  renameDashboardHabit: (id: string, short: string) => void;
+  moveDashboardHabit: (id: string, direction: "up" | "down") => void;
   setHealthValue: (date: string, key: HealthKey, value: Score) => void;
   setTask: (date: string, taskIndex: 1 | 2 | 3, entry: Partial<TaskEntry>) => void;
   setCalorieValue: (date: string, key: keyof Omit<CalorieDay, "date">, value: number | null) => void;
@@ -46,6 +55,56 @@ export const useStore = create<Store>()(
               },
             },
           };
+        }),
+
+      setDashboardHabitValue: (date, habitId, value) =>
+        set((state) => {
+          const habit = state.data.dashboardHabits.find((h) => h.id === habitId);
+          if (!habit) return {};
+          const day = state.data.dashboard[date] ?? emptyDashboardDay(date);
+          const updatedDay = habit.builtin
+            ? { ...day, [habitId]: value }
+            : { ...day, customHabits: { ...(day.customHabits ?? {}), [habitId]: value } };
+          return {
+            data: {
+              ...state.data,
+              dashboard: { ...state.data.dashboard, [date]: updatedDay },
+            },
+          };
+        }),
+
+      addDashboardHabit: (short) =>
+        set((state) => ({
+          data: {
+            ...state.data,
+            dashboardHabits: [...state.data.dashboardHabits, { id: makeHabitId(), short: short.trim() || "Habitude", builtin: false }],
+          },
+        })),
+
+      removeDashboardHabit: (id) =>
+        set((state) => ({
+          data: {
+            ...state.data,
+            dashboardHabits: state.data.dashboardHabits.filter((h) => h.id !== id),
+          },
+        })),
+
+      renameDashboardHabit: (id, short) =>
+        set((state) => ({
+          data: {
+            ...state.data,
+            dashboardHabits: state.data.dashboardHabits.map((h) => (h.id === id ? { ...h, short } : h)),
+          },
+        })),
+
+      moveDashboardHabit: (id, direction) =>
+        set((state) => {
+          const list = [...state.data.dashboardHabits];
+          const idx = list.findIndex((h) => h.id === id);
+          const swapWith = direction === "up" ? idx - 1 : idx + 1;
+          if (idx === -1 || swapWith < 0 || swapWith >= list.length) return {};
+          [list[idx], list[swapWith]] = [list[swapWith], list[idx]];
+          return { data: { ...state.data, dashboardHabits: list } };
         }),
 
       setHealthValue: (date, key, value) =>
@@ -117,10 +176,12 @@ export const useStore = create<Store>()(
             health: { ...state.data.health, ...(incoming.health ?? {}) },
             calories: { ...state.data.calories, ...(incoming.calories ?? {}) },
             profile: { ...state.data.profile, ...(incoming.profile ?? {}) },
+            dashboardHabits: incoming.dashboardHabits ?? state.data.dashboardHabits,
           },
         })),
 
-      resetAll: () => set({ data: { dashboard: {}, health: {}, calories: {}, profile: defaultProfile() } }),
+      resetAll: () =>
+        set({ data: { dashboard: {}, health: {}, calories: {}, profile: defaultProfile(), dashboardHabits: defaultDashboardHabits() } }),
     }),
     {
       name: "tradingstats-productivity-v1",

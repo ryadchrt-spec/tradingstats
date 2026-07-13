@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, LabelList } from "recharts";
-import type { AppData } from "../types";
-import { DASHBOARD_HABITS, HEALTH_HABITS } from "../habits";
-import { average, scoreToNum, toDiffPair } from "../compute";
+import type { AppData, HealthKey } from "../types";
+import { HEALTH_HABITS } from "../habits";
+import { average, scoreToNum, dashboardHabitValue, toDiffPair } from "../compute";
 import { monthBuckets, tickIntervalFor } from "../ranges";
 import { COLORS } from "../chartColors";
 import { ChartTooltip } from "./ChartTooltip";
@@ -43,16 +43,17 @@ export function MonthlyBreakdown({
     return { month: b.label, ...toDiffPair(primaryVal, compareVal) };
   });
 
-  function habitSeries(habitKey: string, source: "dashboard" | "health") {
-    const valueAt = (dates: string[], key: string) =>
-      average(dates.map((d) => scoreToNum((source === "dashboard" ? (data.dashboard[d] as any) : (data.health[d] as any))?.[key])));
+  function series(valueAt: (dates: string[]) => number | null) {
     return buckets.map((b, i) => {
-      const primaryVal = valueAt(b.dates, habitKey);
+      const primaryVal = valueAt(b.dates);
       const cBucket = compareBuckets[i];
-      const compareVal = cBucket ? valueAt(cBucket.dates, habitKey) : null;
+      const compareVal = cBucket ? valueAt(cBucket.dates) : null;
       return { month: b.label, ...toDiffPair(primaryVal, compareVal) };
     });
   }
+  const dashboardHabitSeries = (habit: AppData["dashboardHabits"][number]) =>
+    series((dates) => average(dates.map((d) => scoreToNum(dashboardHabitValue(data.dashboard[d], habit)))));
+  const healthHabitSeries = (key: HealthKey) => series((dates) => average(dates.map((d) => scoreToNum(data.health[d]?.[key]))));
 
   // Full-width chart has room for more labels than the mini per-habit ones.
   const tickInterval = tickIntervalFor(buckets.length, 10);
@@ -84,11 +85,11 @@ export function MonthlyBreakdown({
           {isComparing && compareLegend}
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-          {DASHBOARD_HABITS.map((h) => (
-            <MiniMonthChart key={h.key} title={h.short} data={habitSeries(h.key, "dashboard")} color={c.series1} compareColor={c.series2} isComparing={isComparing} dark={dark} />
+          {data.dashboardHabits.map((h) => (
+            <MiniMonthChart key={h.id} title={h.short} data={dashboardHabitSeries(h)} color={c.series1} compareColor={c.series2} isComparing={isComparing} dark={dark} />
           ))}
           {HEALTH_HABITS.map((h) => (
-            <MiniMonthChart key={h.key} title={h.short} data={habitSeries(h.key, "health")} color={c.series1} compareColor={c.series2} isComparing={isComparing} dark={dark} />
+            <MiniMonthChart key={h.key} title={h.short} data={healthHabitSeries(h.key)} color={c.series1} compareColor={c.series2} isComparing={isComparing} dark={dark} />
           ))}
         </div>
       </div>

@@ -1,5 +1,5 @@
 import type { AppData, DashboardDay, HealthDay } from "./types";
-import { defaultProfile } from "./emptyRecords";
+import { defaultProfile, defaultDashboardHabits } from "./emptyRecords";
 
 function d(
   date: string,
@@ -20,6 +20,7 @@ function d(
     controlEmotion: null,
     reading: null,
     training: null,
+    customHabits: {},
     dayWin: null,
     ...habits,
     task1: { label: "", score: null, ...task1 },
@@ -113,5 +114,5 @@ export function buildSeedData(): AppData {
   ];
   for (const day of heal) health[day.date] = day;
 
-  return { dashboard, health, calories: {}, profile: defaultProfile() };
+  return { dashboard, health, calories: {}, profile: defaultProfile(), dashboardHabits: defaultDashboardHabits() };
 }

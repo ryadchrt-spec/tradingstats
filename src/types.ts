@@ -17,6 +17,10 @@ export interface DashboardDay {
   controlEmotion: Score;
   reading: Score;
   training: Score;
+  // Values for user-added custom habit columns (see DashboardHabitDef),
+  // keyed by habit id. The 8 built-in habits above stay on their own fixed
+  // fields for backward compatibility with existing data/imports.
+  customHabits: Record<string, Score>;
   task1: TaskEntry;
   task2: TaskEntry;
   task3: TaskEntry;
@@ -24,6 +28,15 @@ export interface DashboardDay {
   // computed daily/monthly average (mirrors the source spreadsheet, where
   // this column sits outside the AVERAGE() range).
   dayWin: Score;
+}
+
+// Describes one habit column on the Dashboard, in display order. Builtin
+// habits store their value on DashboardDay's own field named `id`; custom
+// ones (added by the user) store it in DashboardDay.customHabits[id].
+export interface DashboardHabitDef {
+  id: string;
+  short: string;
+  builtin: boolean;
 }
 
 export interface HealthDay {
@@ -103,4 +116,6 @@ export interface AppData {
   health: Record<string, HealthDay>;
   calories: Record<string, CalorieDay>;
   profile: Profile;
+  // Ordered list of Dashboard habit columns — add/remove/rename/reorder.
+  dashboardHabits: DashboardHabitDef[];
 }
