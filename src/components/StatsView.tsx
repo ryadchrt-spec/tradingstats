@@ -146,6 +146,13 @@ export function StatsView({ year, month }: { year: number; month: number }) {
         };
       });
 
+  // Zoom the Y-axis into the curve's actual range (±5 pts) instead of always
+  // spanning the full 0-100%, which flattened out real variation.
+  const lineValues = lineData.flatMap((d) => [d.primary, d.compare]).filter((v): v is number => v !== null && v !== undefined);
+  const lineYDomain: [number, number] = lineValues.length
+    ? [Math.max(0, Math.min(...lineValues) - 5), Math.min(100, Math.max(...lineValues) + 5)]
+    : [0, 100];
+
   const { dashboardBars: dashboardChartBars, healthBars: healthChartBars } = useMemo(
     () => combinedHabitBreakdown(primaryDates, isComparing ? compareDates : [], data),
     [primaryDates.join(","), isComparing, compareDates.join(","), data]
@@ -307,13 +314,12 @@ export function StatsView({ year, month }: { year: number; month: number }) {
               interval={tickIntervalFor(lineData.length, 8)}
             />
             <YAxis
-              domain={[0, 100]}
-              ticks={[0, 25, 50, 75, 100]}
+              domain={lineYDomain}
               tick={{ fill: c.axis, fontSize: 11 }}
               axisLine={false}
               tickLine={false}
               width={44}
-              tickFormatter={(v) => `${v}%`}
+              tickFormatter={(v) => `${Math.round(v)}%`}
             />
             <Tooltip content={<ChartTooltip dark={dark} unit="%" />} cursor={{ stroke: c.grid }} />
             <Line
