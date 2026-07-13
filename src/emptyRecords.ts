@@ -53,7 +53,7 @@ export function defaultProfile(): Profile {
     heightCm: 170,
     age: 25,
     sex: "M",
-    activityMultiplier: 1.2,
+    activityMultiplier: 1.55,
     proteinPerKg: 2,
     calorieGoal: 0,
   };

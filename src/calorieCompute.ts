@@ -98,12 +98,14 @@ export function formatSigned(v: number | null, decimals = 0): string {
   return `${sign}${formatNum(v, decimals)}`;
 }
 
+// NAP = Niveau d'Activité Physique, the multiplier at the end of the TDEE
+// formula (BMR × NAP). Matches the presets used in the source spreadsheet.
 export const ACTIVITY_LEVELS: { value: number; label: string; short: string }[] = [
-  { value: 1.2, label: "Sédentaire (peu ou pas de sport)", short: "Sédentaire" },
-  { value: 1.375, label: "Légèrement actif (1-3j/semaine)", short: "Léger" },
-  { value: 1.55, label: "Modérément actif (3-5j/semaine)", short: "Modéré" },
-  { value: 1.725, label: "Très actif (6-7j/semaine)", short: "Actif" },
-  { value: 1.9, label: "Extrêmement actif (sport intense/physique)", short: "Intense" },
+  { value: 1.35, label: "NAP 1,35", short: "1,35" },
+  { value: 1.45, label: "NAP 1,45", short: "1,45" },
+  { value: 1.55, label: "NAP 1,55", short: "1,55" },
+  { value: 1.65, label: "NAP 1,65", short: "1,65" },
+  { value: 1.75, label: "NAP 1,75", short: "1,75" },
 ];
 
 export const CALORIE_GOAL_PRESETS: number[] = [-750, -500, -250, 0, 250, 500];

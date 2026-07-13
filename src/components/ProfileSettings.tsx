@@ -49,7 +49,7 @@ export function ProfileSettings() {
             </select>
           </label>
           <label className="flex flex-col gap-1 text-xs text-slate-500 dark:text-slate-400 col-span-2 md:col-span-1">
-            Niveau d'activité
+            NAP (niveau d'activité physique)
             <select
               value={profile.activityMultiplier}
               onChange={(e) => setProfile({ activityMultiplier: Number(e.target.value) })}
