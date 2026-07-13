@@ -114,6 +114,14 @@ export function rangeDates(range: DateRange): string[] {
   return enumerateDateKeys(range.start, range.end);
 }
 
+// Recharts' XAxis `interval` prop is a skip-count ("show every Nth tick"),
+// not a target label count — this converts "I want roughly `target` labels
+// visible" into that skip-count, so a chart stays readable whether it's
+// covering 6 months or several years of monthly buckets.
+export function tickIntervalFor(count: number, target: number): number {
+  return count > target ? Math.ceil(count / target) - 1 : 0;
+}
+
 export interface MonthBucket {
   key: string; // YYYY-MM
   label: string; // "Juil. 2026"

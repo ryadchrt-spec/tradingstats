@@ -3,7 +3,7 @@ import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Toolti
 import type { AppData } from "../types";
 import { DASHBOARD_HABITS, HEALTH_HABITS } from "../habits";
 import { average, scoreToNum, toDiffPair } from "../compute";
-import { monthBuckets } from "../ranges";
+import { monthBuckets, tickIntervalFor } from "../ranges";
 import { COLORS } from "../chartColors";
 import { ChartTooltip } from "./ChartTooltip";
 
@@ -54,7 +54,8 @@ export function MonthlyBreakdown({
     });
   }
 
-  const tickInterval = buckets.length > 8 ? 1 : 0;
+  // Full-width chart has room for more labels than the mini per-habit ones.
+  const tickInterval = tickIntervalFor(buckets.length, 10);
 
   return (
     <>
@@ -111,7 +112,7 @@ function MiniMonthChart({
   dark: boolean;
 }) {
   const c = dark ? COLORS.dark : COLORS.light;
-  const tickInterval = data.length > 8 ? 1 : 0;
+  const tickInterval = tickIntervalFor(data.length, 4);
   return (
     <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 p-3">
       <div className="text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">{title}</div>
