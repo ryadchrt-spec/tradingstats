@@ -12,7 +12,14 @@ import type {
   TaskEntry,
 } from "./types";
 import { buildSeedData } from "./seedData";
-import { emptyDashboardDay, emptyHealthDay, emptyCalorieDay, defaultProfile, defaultDashboardHabits } from "./emptyRecords";
+import {
+  emptyDashboardDay,
+  emptyHealthDay,
+  emptyCalorieDay,
+  defaultProfile,
+  defaultDashboardHabits,
+  defaultHealthHabits,
+} from "./emptyRecords";
 
 function makeHabitId(): string {
   return `custom_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
@@ -27,6 +34,11 @@ interface Store {
   renameDashboardHabit: (id: string, short: string) => void;
   moveDashboardHabit: (id: string, direction: "up" | "down") => void;
   setHealthValue: (date: string, key: HealthKey, value: Score) => void;
+  setHealthHabitValue: (date: string, habitId: string, value: Score) => void;
+  addHealthHabit: (short: string) => void;
+  removeHealthHabit: (id: string) => void;
+  renameHealthHabit: (id: string, short: string) => void;
+  moveHealthHabit: (id: string, direction: "up" | "down") => void;
   setTask: (date: string, taskIndex: 1 | 2 | 3, entry: Partial<TaskEntry>) => void;
   setCalorieValue: (date: string, key: keyof Omit<CalorieDay, "date">, value: number | null) => void;
   setProfile: (partial: Partial<Profile>) => void;
@@ -121,6 +133,56 @@ export const useStore = create<Store>()(
           };
         }),
 
+      setHealthHabitValue: (date, habitId, value) =>
+        set((state) => {
+          const habit = state.data.healthHabits.find((h) => h.id === habitId);
+          if (!habit) return {};
+          const day = state.data.health[date] ?? emptyHealthDay(date);
+          const updatedDay = habit.builtin
+            ? { ...day, [habitId]: value }
+            : { ...day, customHabits: { ...(day.customHabits ?? {}), [habitId]: value } };
+          return {
+            data: {
+              ...state.data,
+              health: { ...state.data.health, [date]: updatedDay },
+            },
+          };
+        }),
+
+      addHealthHabit: (short) =>
+        set((state) => ({
+          data: {
+            ...state.data,
+            healthHabits: [...state.data.healthHabits, { id: makeHabitId(), short: short.trim() || "Habitude", builtin: false }],
+          },
+        })),
+
+      removeHealthHabit: (id) =>
+        set((state) => ({
+          data: {
+            ...state.data,
+            healthHabits: state.data.healthHabits.filter((h) => h.id !== id),
+          },
+        })),
+
+      renameHealthHabit: (id, short) =>
+        set((state) => ({
+          data: {
+            ...state.data,
+            healthHabits: state.data.healthHabits.map((h) => (h.id === id ? { ...h, short } : h)),
+          },
+        })),
+
+      moveHealthHabit: (id, direction) =>
+        set((state) => {
+          const list = [...state.data.healthHabits];
+          const idx = list.findIndex((h) => h.id === id);
+          const swapWith = direction === "up" ? idx - 1 : idx + 1;
+          if (idx === -1 || swapWith < 0 || swapWith >= list.length) return {};
+          [list[idx], list[swapWith]] = [list[swapWith], list[idx]];
+          return { data: { ...state.data, healthHabits: list } };
+        }),
+
       setTask: (date, taskIndex, entry) =>
         set((state) => {
           const day = state.data.dashboard[date] ?? emptyDashboardDay(date);
@@ -177,11 +239,21 @@ export const useStore = create<Store>()(
             calories: { ...state.data.calories, ...(incoming.calories ?? {}) },
             profile: { ...state.data.profile, ...(incoming.profile ?? {}) },
             dashboardHabits: incoming.dashboardHabits ?? state.data.dashboardHabits,
+            healthHabits: incoming.healthHabits ?? state.data.healthHabits,
           },
         })),
 
       resetAll: () =>
-        set({ data: { dashboard: {}, health: {}, calories: {}, profile: defaultProfile(), dashboardHabits: defaultDashboardHabits() } }),
+        set({
+          data: {
+            dashboard: {},
+            health: {},
+            calories: {},
+            profile: defaultProfile(),
+            dashboardHabits: defaultDashboardHabits(),
+            healthHabits: defaultHealthHabits(),
+          },
+        }),
     }),
     {
       name: "tradingstats-productivity-v1",

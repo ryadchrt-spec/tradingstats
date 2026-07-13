@@ -1,5 +1,4 @@
-import type { DashboardDay, DashboardHabitDef, HealthDay, Score } from "./types";
-import { HEALTH_HABITS } from "./habits";
+import type { DashboardDay, DashboardHabitDef, HealthDay, HealthHabitDef, Score } from "./types";
 
 export function average(values: (number | null | undefined)[]): number | null {
   const nums = values.filter((v): v is number => v !== null && v !== undefined);
@@ -14,11 +13,6 @@ export function scoreToNum(v: Score | null | undefined): number | null {
   return v;
 }
 
-export function healthDayAverage(h: HealthDay | undefined): number | null {
-  if (!h) return null;
-  return average(HEALTH_HABITS.map((habit) => scoreToNum(h[habit.key])));
-}
-
 // Builtin habits live on their own DashboardDay field (named after the habit
 // id); custom ones live in customHabits[id]. This is the single place that
 // knows how to read either, so callers never need to branch on `builtin`.
@@ -26,6 +20,18 @@ export function dashboardHabitValue(d: DashboardDay | undefined, habit: Dashboar
   if (!d) return null;
   if (habit.builtin) return (d as unknown as Record<string, Score>)[habit.id] ?? null;
   return d.customHabits?.[habit.id] ?? null;
+}
+
+// Same idea as dashboardHabitValue, for Health's habit columns.
+export function healthHabitValue(h: HealthDay | undefined, habit: HealthHabitDef): Score {
+  if (!h) return null;
+  if (habit.builtin) return (h as unknown as Record<string, Score>)[habit.id] ?? null;
+  return h.customHabits?.[habit.id] ?? null;
+}
+
+export function healthDayAverage(h: HealthDay | undefined, habits: HealthHabitDef[]): number | null {
+  if (!h) return null;
+  return average(habits.map((habit) => scoreToNum(healthHabitValue(h, habit))));
 }
 
 // Mirrors the spreadsheet's Average = AVERAGE(D:R): habits + health + task scores.
@@ -56,9 +62,9 @@ export function hasAnyDashboardData(d: DashboardDay | undefined, habits: Dashboa
   );
 }
 
-export function hasAnyHealthData(h: HealthDay | undefined): boolean {
+export function hasAnyHealthData(h: HealthDay | undefined, habits: HealthHabitDef[]): boolean {
   if (!h) return false;
-  return HEALTH_HABITS.some((habit) => h[habit.key] !== null);
+  return habits.some((habit) => healthHabitValue(h, habit) !== null);
 }
 
 export function formatPct(v: number | null): string {

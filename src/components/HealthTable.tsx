@@ -1,32 +1,34 @@
 import { useStore } from "../store";
-import { HEALTH_HABITS } from "../habits";
 import { daysInMonth, dayNameFr, toDateKey, isToday } from "../dateUtils";
-import { average, healthDayAverage, formatPct, scoreToNum } from "../compute";
+import { average, healthDayAverage, healthHabitValue, formatPct, scoreToNum } from "../compute";
 import { ScoreCell } from "./ScoreCell";
-import type { HealthKey } from "../types";
+import { HealthHabitManager } from "./HealthHabitManager";
 
 export function HealthTable({ year, month }: { year: number; month: number }) {
   const data = useStore((s) => s.data);
-  const setHealthValue = useStore((s) => s.setHealthValue);
+  const setHealthHabitValue = useStore((s) => s.setHealthHabitValue);
+  const habits = data.healthHabits;
 
   const nDays = daysInMonth(year, month);
   const dates = Array.from({ length: nDays }, (_, i) => toDateKey(year, month, i + 1));
 
-  const monthlyHabitAverages = HEALTH_HABITS.map((habit) =>
-    average(dates.map((date) => scoreToNum(data.health[date]?.[habit.key])))
+  const monthlyHabitAverages = habits.map((habit) =>
+    average(dates.map((date) => scoreToNum(healthHabitValue(data.health[date], habit))))
   );
-  const monthlyOverall = average(dates.map((date) => healthDayAverage(data.health[date])));
+  const monthlyOverall = average(dates.map((date) => healthDayAverage(data.health[date], habits)));
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-800">
+    <div className="flex flex-col gap-4">
+      <HealthHabitManager />
+      <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-800">
       <table className="min-w-full border-collapse text-sm">
         <thead>
           <tr className="bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wide">
             <th className="sticky left-0 z-10 bg-slate-50 dark:bg-slate-900 px-3 py-2 text-left font-medium min-w-[110px]">Jour</th>
             <th className="px-3 py-2 text-left font-medium min-w-[70px]">Date</th>
             <th className="px-3 py-2 text-left font-medium min-w-[70px]">Moyenne</th>
-            {HEALTH_HABITS.map((h) => (
-              <th key={h.key} className="px-2 py-2 text-center font-medium min-w-[80px]">
+            {habits.map((h) => (
+              <th key={h.id} className="px-2 py-2 text-center font-medium min-w-[80px]">
                 {h.short}
               </th>
             ))}
@@ -48,7 +50,7 @@ export function HealthTable({ year, month }: { year: number; month: number }) {
             const dName = dayNameFr(year, month, day);
             const isWeekend = dName === "dimanche" || dName === "samedi";
             const h = data.health[date];
-            const dayAvg = healthDayAverage(h);
+            const dayAvg = healthDayAverage(h, habits);
             const today = isToday(date);
             return (
               <tr
@@ -62,12 +64,12 @@ export function HealthTable({ year, month }: { year: number; month: number }) {
                 </td>
                 <td className="px-3 py-1.5 text-slate-500 dark:text-slate-400 tabular-nums">{day}</td>
                 <td className="px-3 py-1.5 tabular-nums text-slate-700 dark:text-slate-200 font-medium">{formatPct(dayAvg)}</td>
-                {HEALTH_HABITS.map((habit) => (
-                  <td key={habit.key} className="px-2 py-1.5 text-center">
+                {habits.map((habit) => (
+                  <td key={habit.id} className="px-2 py-1.5 text-center">
                     <div className="flex justify-center">
                       <ScoreCell
-                        value={h?.[habit.key] ?? null}
-                        onChange={(v) => setHealthValue(date, habit.key as HealthKey, v)}
+                        value={healthHabitValue(h, habit)}
+                        onChange={(v) => setHealthHabitValue(date, habit.id, v)}
                       />
                     </div>
                   </td>
@@ -77,6 +79,7 @@ export function HealthTable({ year, month }: { year: number; month: number }) {
           })}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }

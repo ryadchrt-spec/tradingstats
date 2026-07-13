@@ -1,5 +1,5 @@
-import type { CalorieDay, DashboardDay, DashboardHabitDef, HealthDay, Profile } from "./types";
-import { DASHBOARD_HABITS } from "./habits";
+import type { CalorieDay, DashboardDay, DashboardHabitDef, HealthDay, HealthHabitDef, Profile } from "./types";
+import { DASHBOARD_HABITS, HEALTH_HABITS } from "./habits";
 
 export function emptyDashboardDay(date: string): DashboardDay {
   return {
@@ -37,7 +37,12 @@ export function emptyHealthDay(date: string): HealthDay {
     tracking: null,
     morningRoutine: null,
     noSmoke: null,
+    customHabits: {},
   };
+}
+
+export function defaultHealthHabits(): HealthHabitDef[] {
+  return HEALTH_HABITS.map((h) => ({ id: h.key, short: h.short, builtin: true }));
 }
 
 export function emptyCalorieDay(date: string): CalorieDay {

@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import { useStore } from "../store";
 import type { AppData } from "../types";
 import { parseWorkbookFile } from "../excelImport";
-import { defaultProfile, defaultDashboardHabits } from "../emptyRecords";
+import { defaultProfile, defaultDashboardHabits, defaultHealthHabits } from "../emptyRecords";
 
 export function Toolbar() {
   const data = useStore((s) => s.data);
@@ -41,6 +41,7 @@ export function Toolbar() {
         calories: parsed.calories ?? {},
         profile: { ...defaultProfile(), ...(parsed.profile ?? {}) },
         dashboardHabits: parsed.dashboardHabits ?? defaultDashboardHabits(),
+        healthHabits: parsed.healthHabits ?? defaultHealthHabits(),
       });
     } catch {
       alert("Fichier JSON invalide.");

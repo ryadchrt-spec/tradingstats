@@ -51,6 +51,19 @@ export interface HealthDay {
   tracking: Score;
   morningRoutine: Score;
   noSmoke: Score;
+  // Values for user-added custom habit columns (see HealthHabitDef), keyed
+  // by habit id. The 10 built-in habits above stay on their own fixed
+  // fields for backward compatibility with existing data/imports.
+  customHabits: Record<string, Score>;
+}
+
+// Describes one habit column on Health, in display order. Builtin habits
+// store their value on HealthDay's own field named `id`; custom ones
+// (added by the user) store it in HealthDay.customHabits[id].
+export interface HealthHabitDef {
+  id: string;
+  short: string;
+  builtin: boolean;
 }
 
 export type DashboardKey =
@@ -118,4 +131,6 @@ export interface AppData {
   profile: Profile;
   // Ordered list of Dashboard habit columns — add/remove/rename/reorder.
   dashboardHabits: DashboardHabitDef[];
+  // Same, for Health.
+  healthHabits: HealthHabitDef[];
 }

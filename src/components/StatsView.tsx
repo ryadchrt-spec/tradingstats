@@ -2,9 +2,8 @@ import { useMemo, useState } from "react";
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, BarChart, Bar, LabelList } from "recharts";
 import { useStore } from "../store";
 import type { AppData } from "../types";
-import { HEALTH_HABITS } from "../habits";
 import { shortDateLabelFr, todayKey, currentMonthStr, shiftMonthStr, monthStrToFirstDay, monthStrToLastDay } from "../dateUtils";
-import { average, dashboardDailyAverage, dashboardHabitValue, healthDayAverage, hasAnyDashboardData, currentStreak, daysTracked, scoreToNum, toDiffPair, type DiffPair } from "../compute";
+import { average, dashboardDailyAverage, dashboardHabitValue, healthDayAverage, healthHabitValue, hasAnyDashboardData, currentStreak, daysTracked, scoreToNum, toDiffPair, type DiffPair } from "../compute";
 import { useDarkMode } from "../useDarkMode";
 import { StatTile } from "./StatItem";
 import { ChartTooltip } from "./ChartTooltip";
@@ -47,7 +46,9 @@ function combinedHabitBreakdown(
     dashboardBars: finish(
       data.dashboardHabits.map((h) => summarize(h.short, (date) => scoreToNum(dashboardHabitValue(data.dashboard[date], h))))
     ),
-    healthBars: finish(HEALTH_HABITS.map((h) => summarize(h.short, (date) => scoreToNum(data.health[date]?.[h.key])))),
+    healthBars: finish(
+      data.healthHabits.map((h) => summarize(h.short, (date) => scoreToNum(healthHabitValue(data.health[date], h))))
+    ),
   };
 }
 
@@ -80,7 +81,7 @@ export function StatsView({ year, month }: { year: number; month: number }) {
     () =>
       primaryDates.map((date) => {
         const d = data.dashboard[date];
-        const hAvg = healthDayAverage(data.health[date]);
+        const hAvg = healthDayAverage(data.health[date], data.healthHabits);
         return hasAnyDashboardData(d, data.dashboardHabits) ? dashboardDailyAverage(d, hAvg, data.dashboardHabits) : null;
       }),
     [data, primaryDates.join(",")]
@@ -104,7 +105,7 @@ export function StatsView({ year, month }: { year: number; month: number }) {
     () =>
       compareDates.map((date) => {
         const d = data.dashboard[date];
-        const hAvg = healthDayAverage(data.health[date]);
+        const hAvg = healthDayAverage(data.health[date], data.healthHabits);
         return hasAnyDashboardData(d, data.dashboardHabits) ? dashboardDailyAverage(d, hAvg, data.dashboardHabits) : null;
       }),
     [data, compareDates.join(",")]

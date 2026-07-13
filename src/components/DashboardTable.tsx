@@ -16,7 +16,7 @@ export function DashboardTable({ year, month }: { year: number; month: number })
 
   const dailyAverages = dates.map((date) => {
     const d = data.dashboard[date];
-    const hAvg = healthDayAverage(data.health[date]);
+    const hAvg = healthDayAverage(data.health[date], data.healthHabits);
     return hasAnyDashboardData(d, habits) ? dashboardDailyAverage(d, hAvg, habits) : null;
   });
   const monthlyAverage = average(dailyAverages);
@@ -24,7 +24,7 @@ export function DashboardTable({ year, month }: { year: number; month: number })
   const monthlyHabitAverages = habits.map((habit) =>
     average(dates.map((date) => scoreToNum(dashboardHabitValue(data.dashboard[date], habit))))
   );
-  const monthlyHealthAvg = average(dates.map((date) => healthDayAverage(data.health[date])));
+  const monthlyHealthAvg = average(dates.map((date) => healthDayAverage(data.health[date], data.healthHabits)));
   const monthlyTaskAverages = [1, 2, 3].map((i) =>
     average(
       dates.map((date) => {
@@ -80,7 +80,7 @@ export function DashboardTable({ year, month }: { year: number; month: number })
             const dName = dayNameFr(year, month, day);
             const isWeekend = dName === "dimanche" || dName === "samedi";
             const d = data.dashboard[date];
-            const hAvg = healthDayAverage(data.health[date]);
+            const hAvg = healthDayAverage(data.health[date], data.healthHabits);
             const dailyAvg = hasAnyDashboardData(d, habits) ? dashboardDailyAverage(d, hAvg, habits) : null;
             const today = isToday(date);
             return (

@@ -1,8 +1,7 @@
 import type { ReactNode } from "react";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, LabelList } from "recharts";
-import type { AppData, HealthKey } from "../types";
-import { HEALTH_HABITS } from "../habits";
-import { average, scoreToNum, dashboardHabitValue, toDiffPair } from "../compute";
+import type { AppData } from "../types";
+import { average, scoreToNum, dashboardHabitValue, healthHabitValue, toDiffPair } from "../compute";
 import { monthBuckets, tickIntervalFor } from "../ranges";
 import { COLORS } from "../chartColors";
 import { ChartTooltip } from "./ChartTooltip";
@@ -53,7 +52,8 @@ export function MonthlyBreakdown({
   }
   const dashboardHabitSeries = (habit: AppData["dashboardHabits"][number]) =>
     series((dates) => average(dates.map((d) => scoreToNum(dashboardHabitValue(data.dashboard[d], habit)))));
-  const healthHabitSeries = (key: HealthKey) => series((dates) => average(dates.map((d) => scoreToNum(data.health[d]?.[key]))));
+  const healthHabitSeries = (habit: AppData["healthHabits"][number]) =>
+    series((dates) => average(dates.map((d) => scoreToNum(healthHabitValue(data.health[d], habit)))));
 
   // Full-width chart has room for more labels than the mini per-habit ones.
   const tickInterval = tickIntervalFor(buckets.length, 10);
@@ -88,8 +88,8 @@ export function MonthlyBreakdown({
           {data.dashboardHabits.map((h) => (
             <MiniMonthChart key={h.id} title={h.short} data={dashboardHabitSeries(h)} color={c.series1} compareColor={c.series2} isComparing={isComparing} dark={dark} />
           ))}
-          {HEALTH_HABITS.map((h) => (
-            <MiniMonthChart key={h.key} title={h.short} data={healthHabitSeries(h.key)} color={c.series1} compareColor={c.series2} isComparing={isComparing} dark={dark} />
+          {data.healthHabits.map((h) => (
+            <MiniMonthChart key={h.id} title={h.short} data={healthHabitSeries(h)} color={c.series1} compareColor={c.series2} isComparing={isComparing} dark={dark} />
           ))}
         </div>
       </div>
