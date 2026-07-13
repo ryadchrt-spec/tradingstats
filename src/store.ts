@@ -33,12 +33,14 @@ interface Store {
   removeDashboardHabit: (id: string) => void;
   renameDashboardHabit: (id: string, short: string) => void;
   moveDashboardHabit: (id: string, direction: "up" | "down") => void;
+  setDashboardHabitTarget: (id: string, target: number | null) => void;
   setHealthValue: (date: string, key: HealthKey, value: Score) => void;
   setHealthHabitValue: (date: string, habitId: string, value: Score) => void;
   addHealthHabit: (short: string) => void;
   removeHealthHabit: (id: string) => void;
   renameHealthHabit: (id: string, short: string) => void;
   moveHealthHabit: (id: string, direction: "up" | "down") => void;
+  setHealthHabitTarget: (id: string, target: number | null) => void;
   setTask: (date: string, taskIndex: 1 | 2 | 3, entry: Partial<TaskEntry>) => void;
   setCalorieValue: (date: string, key: keyof Omit<CalorieDay, "date">, value: number | null) => void;
   setProfile: (partial: Partial<Profile>) => void;
@@ -89,7 +91,7 @@ export const useStore = create<Store>()(
         set((state) => ({
           data: {
             ...state.data,
-            dashboardHabits: [...state.data.dashboardHabits, { id: makeHabitId(), short: short.trim() || "Habitude", builtin: false }],
+            dashboardHabits: [...state.data.dashboardHabits, { id: makeHabitId(), short: short.trim() || "Habitude", builtin: false, target: null }],
           },
         })),
 
@@ -118,6 +120,14 @@ export const useStore = create<Store>()(
           [list[idx], list[swapWith]] = [list[swapWith], list[idx]];
           return { data: { ...state.data, dashboardHabits: list } };
         }),
+
+      setDashboardHabitTarget: (id, target) =>
+        set((state) => ({
+          data: {
+            ...state.data,
+            dashboardHabits: state.data.dashboardHabits.map((h) => (h.id === id ? { ...h, target } : h)),
+          },
+        })),
 
       setHealthValue: (date, key, value) =>
         set((state) => {
@@ -153,7 +163,7 @@ export const useStore = create<Store>()(
         set((state) => ({
           data: {
             ...state.data,
-            healthHabits: [...state.data.healthHabits, { id: makeHabitId(), short: short.trim() || "Habitude", builtin: false }],
+            healthHabits: [...state.data.healthHabits, { id: makeHabitId(), short: short.trim() || "Habitude", builtin: false, target: null }],
           },
         })),
 
@@ -182,6 +192,14 @@ export const useStore = create<Store>()(
           [list[idx], list[swapWith]] = [list[swapWith], list[idx]];
           return { data: { ...state.data, healthHabits: list } };
         }),
+
+      setHealthHabitTarget: (id, target) =>
+        set((state) => ({
+          data: {
+            ...state.data,
+            healthHabits: state.data.healthHabits.map((h) => (h.id === id ? { ...h, target } : h)),
+          },
+        })),
 
       setTask: (date, taskIndex, entry) =>
         set((state) => {

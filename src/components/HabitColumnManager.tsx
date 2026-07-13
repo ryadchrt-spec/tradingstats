@@ -3,6 +3,7 @@ import { useState } from "react";
 interface HabitLike {
   id: string;
   short: string;
+  target: number | null;
 }
 
 export function HabitColumnManager({
@@ -12,6 +13,7 @@ export function HabitColumnManager({
   onRemove,
   onRename,
   onMove,
+  onSetTarget,
 }: {
   title: string;
   habits: HabitLike[];
@@ -19,6 +21,7 @@ export function HabitColumnManager({
   onRemove: (id: string) => void;
   onRename: (id: string, short: string) => void;
   onMove: (id: string, direction: "up" | "down") => void;
+  onSetTarget: (id: string, target: number | null) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [newHabit, setNewHabit] = useState("");
@@ -67,6 +70,17 @@ export function HabitColumnManager({
                 value={h.short}
                 onChange={(e) => onRename(h.id, e.target.value)}
                 className="flex-1 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1 text-sm text-slate-700 dark:text-slate-200"
+              />
+              <input
+                type="number"
+                min={0}
+                max={100}
+                step={5}
+                value={h.target ?? ""}
+                onChange={(e) => onSetTarget(h.id, e.target.value === "" ? null : Math.max(0, Math.min(100, Number(e.target.value))))}
+                placeholder="Objectif %"
+                title="Objectif personnel (%) — laisser vide pour aucun objectif"
+                className="w-24 shrink-0 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1 text-sm text-slate-700 dark:text-slate-200 placeholder:text-slate-400 placeholder:text-xs"
               />
               <button
                 type="button"

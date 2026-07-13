@@ -7,6 +7,7 @@ export function DashboardHabitManager() {
   const removeDashboardHabit = useStore((s) => s.removeDashboardHabit);
   const renameDashboardHabit = useStore((s) => s.renameDashboardHabit);
   const moveDashboardHabit = useStore((s) => s.moveDashboardHabit);
+  const setDashboardHabitTarget = useStore((s) => s.setDashboardHabitTarget);
 
   return (
     <HabitColumnManager
@@ -16,6 +17,7 @@ export function DashboardHabitManager() {
       onRemove={removeDashboardHabit}
       onRename={renameDashboardHabit}
       onMove={moveDashboardHabit}
+      onSetTarget={setDashboardHabitTarget}
     />
   );
 }

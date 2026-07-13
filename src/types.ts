@@ -37,6 +37,8 @@ export interface DashboardHabitDef {
   id: string;
   short: string;
   builtin: boolean;
+  // Personal target for this habit, as a 0-100 percentage. null = no target set.
+  target: number | null;
 }
 
 export interface HealthDay {
@@ -64,6 +66,8 @@ export interface HealthHabitDef {
   id: string;
   short: string;
   builtin: boolean;
+  // Personal target for this habit, as a 0-100 percentage. null = no target set.
+  target: number | null;
 }
 
 export type DashboardKey =

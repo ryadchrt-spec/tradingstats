@@ -7,6 +7,7 @@ export function HealthHabitManager() {
   const removeHealthHabit = useStore((s) => s.removeHealthHabit);
   const renameHealthHabit = useStore((s) => s.renameHealthHabit);
   const moveHealthHabit = useStore((s) => s.moveHealthHabit);
+  const setHealthHabitTarget = useStore((s) => s.setHealthHabitTarget);
 
   return (
     <HabitColumnManager
@@ -16,6 +17,7 @@ export function HealthHabitManager() {
       onRemove={removeHealthHabit}
       onRename={renameHealthHabit}
       onMove={moveHealthHabit}
+      onSetTarget={setHealthHabitTarget}
     />
   );
 }
