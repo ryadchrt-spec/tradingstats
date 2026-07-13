@@ -1,5 +1,4 @@
-import { useMemo, useState } from "react";
-import { ResponsiveContainer, ScatterChart, Scatter, XAxis, YAxis, ZAxis, CartesianGrid, Tooltip } from "recharts";
+import { Fragment, useMemo, useState } from "react";
 import type { AppData } from "../types";
 import { scoreToNum, dashboardHabitValue, healthHabitValue } from "../compute";
 import { COLORS } from "../chartColors";
@@ -55,27 +54,26 @@ function correlationLabel(r: number): string {
   return `${strength} ${direction}`;
 }
 
-function CorrelationTooltip({ active, payload, dark }: any) {
-  if (!active || !payload || !payload.length) return null;
-  const c = dark ? COLORS.dark : COLORS.light;
-  const p = payload[0].payload;
-  return (
-    <div
-      style={{
-        background: c.surface,
-        border: `1px solid ${dark ? "rgba(255,255,255,0.10)" : "rgba(11,11,11,0.10)"}`,
-        borderRadius: 8,
-        padding: "6px 10px",
-        fontSize: 12,
-        color: c.primary,
-        boxShadow: "0 4px 12px rgba(0,0,0,0.12)",
-      }}
-    >
-      <div>{p.x}% / {p.y}%</div>
-      <div style={{ color: c.secondary }}>{p.count} jour(s)</div>
-    </div>
-  );
+function hexToRgba(hex: string, alpha: number): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
+
+// Each habit only ever takes 3 values (0%, 50%, 100%), so a scatter plot has
+// at most 9 possible positions — a 3x3 grid of "how many days had this exact
+// combination" reads far more directly than a bubble chart at that scale.
+const ROWS: [number, string][] = [
+  [1, "100%"],
+  [0.5, "50%"],
+  [0, "0%"],
+];
+const COLS: [number, string][] = [
+  [0, "0%"],
+  [0.5, "50%"],
+  [1, "100%"],
+];
 
 export function CorrelationCard({ dates, data, dark }: { dates: string[]; data: AppData; dark: boolean }) {
   const c = dark ? COLORS.dark : COLORS.light;
@@ -90,22 +88,14 @@ export function CorrelationCard({ dates, data, dark }: { dates: string[]; data: 
 
   const pairs: [number, number][] = [];
   for (const date of dates) {
-    const x = optA.valueAt(date);
-    const y = optB.valueAt(date);
-    if (x !== null && y !== null) pairs.push([x, y]);
+    const a = optA.valueAt(date);
+    const b = optB.valueAt(date);
+    if (a !== null && b !== null) pairs.push([a, b]);
   }
   const r = pearsonCorrelation(pairs);
 
-  const freq = new Map<string, { x: number; y: number; count: number }>();
-  for (const [x, y] of pairs) {
-    const xPct = Math.round(x * 100);
-    const yPct = Math.round(y * 100);
-    const key = `${xPct}-${yPct}`;
-    const entry = freq.get(key);
-    if (entry) entry.count += 1;
-    else freq.set(key, { x: xPct, y: yPct, count: 1 });
-  }
-  const bubbleData = [...freq.values()];
+  const grid = ROWS.map(([av]) => COLS.map(([bv]) => pairs.filter(([a, b]) => a === av && b === bv).length));
+  const maxCount = Math.max(1, ...grid.flat());
 
   return (
     <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 p-4">
@@ -142,47 +132,57 @@ export function CorrelationCard({ dates, data, dark }: { dates: string[]; data: 
         </p>
       ) : (
         <>
-          <p className="text-sm mb-2 text-slate-600 dark:text-slate-300">
+          <p className="text-sm mb-4 text-slate-600 dark:text-slate-300">
             <span className="font-semibold tabular-nums">r = {r.toFixed(2)}</span>{" "}
             <span className="text-slate-500 dark:text-slate-400">
               — corrélation {correlationLabel(r)} ({pairs.length} jours communs)
             </span>
           </p>
-          <ResponsiveContainer width="100%" height={220}>
-            <ScatterChart margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
-              <CartesianGrid stroke={c.grid} />
-              <XAxis
-                type="number"
-                dataKey="x"
-                name={optA.label}
-                domain={[0, 100]}
-                ticks={[0, 50, 100]}
-                tick={{ fill: c.axis, fontSize: 11 }}
-                axisLine={{ stroke: c.grid }}
-                tickLine={false}
-                tickFormatter={(v) => `${v}%`}
-              />
-              <YAxis
-                type="number"
-                dataKey="y"
-                name={optB.label}
-                domain={[0, 100]}
-                ticks={[0, 50, 100]}
-                tick={{ fill: c.axis, fontSize: 11 }}
-                axisLine={false}
-                tickLine={false}
-                width={36}
-                tickFormatter={(v) => `${v}%`}
-              />
-              <ZAxis type="number" dataKey="count" range={[80, 500]} />
-              <Tooltip content={<CorrelationTooltip dark={dark} />} cursor={{ strokeDasharray: "3 3" }} />
-              <Scatter data={bubbleData} fill={c.series1} fillOpacity={0.7} />
-            </ScatterChart>
-          </ResponsiveContainer>
-          <div className="flex justify-between text-[10px] text-slate-400 dark:text-slate-500 mt-1">
-            <span>{optA.label} →</span>
-            <span>↑ {optB.label}</span>
+
+          <div className="flex gap-2 max-w-md">
+            <div
+              className="shrink-0 flex items-center justify-center text-[11px] text-slate-500 dark:text-slate-400 text-center"
+              style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}
+            >
+              {optA.label}
+            </div>
+            <div className="flex-1">
+              <div className="grid gap-1" style={{ gridTemplateColumns: "44px repeat(3, 1fr)" }}>
+                <div />
+                {COLS.map(([, label]) => (
+                  <div key={label} className="text-center text-[11px] text-slate-500 dark:text-slate-400 pb-1">
+                    {label}
+                  </div>
+                ))}
+                {ROWS.map(([av, aLabel], ri) => (
+                  <Fragment key={aLabel}>
+                    <div className="flex items-center justify-end pr-1 text-[11px] text-slate-500 dark:text-slate-400">
+                      {aLabel}
+                    </div>
+                    {COLS.map(([bv, bLabel], ci) => {
+                      const count = grid[ri][ci];
+                      const alpha = count === 0 ? 0 : 0.15 + 0.65 * (count / maxCount);
+                      return (
+                        <div
+                          key={`${av}-${bv}`}
+                          title={`${optA.label} = ${aLabel} et ${optB.label} = ${bLabel} : ${count} jour(s)`}
+                          className="aspect-square rounded-md flex items-center justify-center text-sm font-semibold tabular-nums"
+                          style={{ background: hexToRgba(c.series1, alpha), color: alpha > 0.45 ? "#fff" : c.primary }}
+                        >
+                          {count > 0 ? count : ""}
+                        </div>
+                      );
+                    })}
+                  </Fragment>
+                ))}
+              </div>
+              <div className="text-center text-[11px] text-slate-500 dark:text-slate-400 mt-1">{optB.label}</div>
+            </div>
           </div>
+          <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-2">
+            Chaque case = le nombre de jours où {optA.label} et {optB.label} avaient ces deux valeurs à la fois.
+            Plus la case est foncée, plus ça arrive souvent.
+          </p>
         </>
       )}
     </div>
