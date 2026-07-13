@@ -130,6 +130,15 @@ export interface Profile {
   calorieGoal: number;
 }
 
+// A date range (inclusive) marked out — e.g. vacation, illness — so it can be
+// excluded from averages/comparisons without deleting the underlying data.
+export interface PeriodAnnotation {
+  id: string;
+  start: string; // YYYY-MM-DD
+  end: string; // YYYY-MM-DD
+  label: string;
+}
+
 export interface AppData {
   dashboard: Record<string, DashboardDay>;
   health: Record<string, HealthDay>;
@@ -139,4 +148,5 @@ export interface AppData {
   dashboardHabits: DashboardHabitDef[];
   // Same, for Health.
   healthHabits: HealthHabitDef[];
+  annotations: PeriodAnnotation[];
 }

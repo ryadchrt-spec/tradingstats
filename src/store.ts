@@ -21,7 +21,7 @@ import {
   defaultHealthHabits,
 } from "./emptyRecords";
 
-function makeHabitId(): string {
+function makeId(): string {
   return `custom_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
 }
 
@@ -44,6 +44,8 @@ interface Store {
   setTask: (date: string, taskIndex: 1 | 2 | 3, entry: Partial<TaskEntry>) => void;
   setCalorieValue: (date: string, key: keyof Omit<CalorieDay, "date">, value: number | null) => void;
   setProfile: (partial: Partial<Profile>) => void;
+  addAnnotation: (start: string, end: string, label: string) => void;
+  removeAnnotation: (id: string) => void;
   getDashboardDay: (date: string) => DashboardDay;
   getHealthDay: (date: string) => HealthDay;
   getCalorieDay: (date: string) => CalorieDay;
@@ -91,7 +93,7 @@ export const useStore = create<Store>()(
         set((state) => ({
           data: {
             ...state.data,
-            dashboardHabits: [...state.data.dashboardHabits, { id: makeHabitId(), short: short.trim() || "Habitude", builtin: false, targets: {} }],
+            dashboardHabits: [...state.data.dashboardHabits, { id: makeId(), short: short.trim() || "Habitude", builtin: false, targets: {} }],
           },
         })),
 
@@ -169,7 +171,7 @@ export const useStore = create<Store>()(
         set((state) => ({
           data: {
             ...state.data,
-            healthHabits: [...state.data.healthHabits, { id: makeHabitId(), short: short.trim() || "Habitude", builtin: false, targets: {} }],
+            healthHabits: [...state.data.healthHabits, { id: makeId(), short: short.trim() || "Habitude", builtin: false, targets: {} }],
           },
         })),
 
@@ -253,6 +255,27 @@ export const useStore = create<Store>()(
           data: { ...state.data, profile: { ...state.data.profile, ...partial } },
         })),
 
+      addAnnotation: (start, end, label) =>
+        set((state) => ({
+          data: {
+            ...state.data,
+            annotations: [
+              ...state.data.annotations,
+              {
+                id: makeId(),
+                start: start <= end ? start : end,
+                end: start <= end ? end : start,
+                label: label.trim() || "Période exclue",
+              },
+            ],
+          },
+        })),
+
+      removeAnnotation: (id) =>
+        set((state) => ({
+          data: { ...state.data, annotations: state.data.annotations.filter((a) => a.id !== id) },
+        })),
+
       getDashboardDay: (date) => get().data.dashboard[date] ?? emptyDashboardDay(date),
       getHealthDay: (date) => get().data.health[date] ?? emptyHealthDay(date),
       getCalorieDay: (date) => get().data.calories[date] ?? emptyCalorieDay(date),
@@ -270,6 +293,7 @@ export const useStore = create<Store>()(
             profile: { ...state.data.profile, ...(incoming.profile ?? {}) },
             dashboardHabits: incoming.dashboardHabits ?? state.data.dashboardHabits,
             healthHabits: incoming.healthHabits ?? state.data.healthHabits,
+            annotations: incoming.annotations ?? state.data.annotations,
           },
         })),
 
@@ -282,6 +306,7 @@ export const useStore = create<Store>()(
             profile: defaultProfile(),
             dashboardHabits: defaultDashboardHabits(),
             healthHabits: defaultHealthHabits(),
+            annotations: [],
           },
         }),
     }),

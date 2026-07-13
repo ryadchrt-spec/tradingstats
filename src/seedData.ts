@@ -122,5 +122,6 @@ export function buildSeedData(): AppData {
     profile: defaultProfile(),
     dashboardHabits: defaultDashboardHabits(),
     healthHabits: defaultHealthHabits(),
+    annotations: [],
   };
 }

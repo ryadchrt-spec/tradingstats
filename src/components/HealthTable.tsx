@@ -1,6 +1,7 @@
 import { useStore } from "../store";
 import { daysInMonth, dayNameFr, toDateKey, isToday, monthKey } from "../dateUtils";
 import { average, healthDayAverage, healthHabitValue, formatPct, scoreToNum } from "../compute";
+import { excludeAnnotated } from "../annotations";
 import { ScoreCell } from "./ScoreCell";
 import { HealthHabitManager } from "./HealthHabitManager";
 
@@ -12,11 +13,14 @@ export function HealthTable({ year, month }: { year: number; month: number }) {
 
   const nDays = daysInMonth(year, month);
   const dates = Array.from({ length: nDays }, (_, i) => toDateKey(year, month, i + 1));
+  // Annotated (excluded) days stay visible/editable in the table body below,
+  // but drop out of every "Moyenne du mois" figure in the header row.
+  const statsDates = excludeAnnotated(dates, data.annotations);
 
   const monthlyHabitAverages = habits.map((habit) =>
-    average(dates.map((date) => scoreToNum(healthHabitValue(data.health[date], habit))))
+    average(statsDates.map((date) => scoreToNum(healthHabitValue(data.health[date], habit))))
   );
-  const monthlyOverall = average(dates.map((date) => healthDayAverage(data.health[date], habits)));
+  const monthlyOverall = average(statsDates.map((date) => healthDayAverage(data.health[date], habits)));
 
   return (
     <div className="flex flex-col gap-4">
@@ -64,15 +68,19 @@ export function HealthTable({ year, month }: { year: number; month: number }) {
             const h = data.health[date];
             const dayAvg = healthDayAverage(h, habits);
             const today = isToday(date);
+            const annotation = data.annotations.find((a) => date >= a.start && date <= a.end);
+            const rowBg = annotation ? "bg-amber-50/70 dark:bg-amber-950/20" : isWeekend ? "bg-slate-50/60 dark:bg-slate-900/40" : "";
             return (
               <tr
                 key={date}
-                className={`border-t border-slate-100 dark:border-slate-800 ${
-                  isWeekend ? "bg-slate-50/60 dark:bg-slate-900/40" : ""
-                } ${today ? "outline outline-2 outline-offset-[-2px] outline-blue-400/60" : ""}`}
+                className={`border-t border-slate-100 dark:border-slate-800 ${rowBg} ${today ? "outline outline-2 outline-offset-[-2px] outline-blue-400/60" : ""}`}
               >
-                <td className={`sticky left-0 z-10 px-3 py-1.5 capitalize text-slate-700 dark:text-slate-200 ${isWeekend ? "bg-slate-50/60 dark:bg-slate-900/40" : "bg-white dark:bg-slate-950"}`}>
+                <td
+                  className={`sticky left-0 z-10 px-3 py-1.5 capitalize text-slate-700 dark:text-slate-200 ${rowBg || "bg-white dark:bg-slate-950"}`}
+                  title={annotation ? `Exclu des moyennes : ${annotation.label}` : undefined}
+                >
                   {dName}
+                  {annotation && <span className="ml-1 text-amber-500">●</span>}
                 </td>
                 <td className="px-3 py-1.5 text-slate-500 dark:text-slate-400 tabular-nums">{day}</td>
                 <td className="px-3 py-1.5 tabular-nums text-slate-700 dark:text-slate-200 font-medium">{formatPct(dayAvg)}</td>

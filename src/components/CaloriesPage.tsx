@@ -10,6 +10,7 @@ import { COLORS } from "../chartColors";
 import { ProfileSettings } from "./ProfileSettings";
 import { CaloriesTable } from "./CaloriesTable";
 import { RANGE_PRESETS, COMPARE_PRESETS, resolveRange, rangeDates, tickIntervalFor, type RangePreset, type DateRange } from "../ranges";
+import { excludeAnnotated } from "../annotations";
 
 type CompareSelection = RangePreset | "none";
 
@@ -26,14 +27,20 @@ export function CaloriesPage({ year, month }: { year: number; month: number }) {
 
   const monthAnchor = { year, month };
   const periodRange: DateRange = useMemo(() => resolveRange(periodPreset, data, monthAnchor), [periodPreset, data, year, month]);
-  const periodDates = useMemo(() => rangeDates(periodRange), [periodRange.start, periodRange.end]);
+  const periodDates = useMemo(
+    () => excludeAnnotated(rangeDates(periodRange), data.annotations),
+    [periodRange.start, periodRange.end, data.annotations]
+  );
   const periodLabel = RANGE_PRESETS.find((p) => p.key === periodPreset)?.label ?? "";
 
   const compareRange: DateRange | null = useMemo(
     () => (isComparing ? resolveRange(comparePreset as RangePreset, data, monthAnchor, periodRange) : null),
     [comparePreset, isComparing, data, year, month, periodRange.start, periodRange.end]
   );
-  const compareDates = useMemo(() => (compareRange ? rangeDates(compareRange) : []), [compareRange?.start, compareRange?.end]);
+  const compareDates = useMemo(
+    () => (compareRange ? excludeAnnotated(rangeDates(compareRange), data.annotations) : []),
+    [compareRange?.start, compareRange?.end, data.annotations]
+  );
   const compareLabel = COMPARE_PRESETS.find((p) => p.key === comparePreset)?.label ?? "";
 
   const rows = useMemo(

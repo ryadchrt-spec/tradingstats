@@ -9,6 +9,8 @@ import { StatTile } from "./StatItem";
 import { ChartTooltip } from "./ChartTooltip";
 import { COLORS } from "../chartColors";
 import { MonthlyBreakdown } from "./MonthlyBreakdown";
+import { AnnotationManager } from "./AnnotationManager";
+import { excludeAnnotated } from "../annotations";
 import {
   RANGE_PRESETS,
   COMPARE_PRESETS,
@@ -75,7 +77,10 @@ export function StatsView({ year, month }: { year: number; month: number }) {
     }
     return resolveRange(primaryPreset, data, monthAnchor);
   }, [primaryPreset, data, year, month, customStartMonth, customEndMonth]);
-  const primaryDates = useMemo(() => rangeDates(primaryRange), [primaryRange.start, primaryRange.end]);
+  const primaryDates = useMemo(
+    () => excludeAnnotated(rangeDates(primaryRange), data.annotations),
+    [primaryRange.start, primaryRange.end, data.annotations]
+  );
 
   const primaryDailyAverages = useMemo(
     () =>
@@ -100,7 +105,10 @@ export function StatsView({ year, month }: { year: number; month: number }) {
     }
     return resolveRange(comparePreset as RangePreset, data, monthAnchor, primaryRange);
   }, [comparePreset, data, year, month, primaryRange.start, primaryRange.end, compareCustomStartMonth, compareCustomEndMonth]);
-  const compareDates = useMemo(() => (compareRange ? rangeDates(compareRange) : []), [compareRange?.start, compareRange?.end]);
+  const compareDates = useMemo(
+    () => (compareRange ? excludeAnnotated(rangeDates(compareRange), data.annotations) : []),
+    [compareRange?.start, compareRange?.end, data.annotations]
+  );
   const compareDailyAverages = useMemo(
     () =>
       compareDates.map((date) => {
@@ -169,6 +177,8 @@ export function StatsView({ year, month }: { year: number; month: number }) {
 
   return (
     <div className="flex flex-col gap-6">
+      <AnnotationManager />
+
       <div className="flex flex-wrap items-center gap-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-4 py-3">
         <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
           Période

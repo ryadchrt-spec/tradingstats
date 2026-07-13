@@ -42,6 +42,7 @@ export function Toolbar() {
         profile: { ...defaultProfile(), ...(parsed.profile ?? {}) },
         dashboardHabits: parsed.dashboardHabits ?? defaultDashboardHabits(),
         healthHabits: parsed.healthHabits ?? defaultHealthHabits(),
+        annotations: parsed.annotations ?? [],
       });
     } catch {
       alert("Fichier JSON invalide.");

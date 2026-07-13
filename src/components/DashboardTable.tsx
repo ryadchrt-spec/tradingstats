@@ -1,6 +1,7 @@
 import { useStore } from "../store";
 import { daysInMonth, dayNameFr, toDateKey, isToday, monthKey } from "../dateUtils";
 import { average, dashboardDailyAverage, dashboardHabitValue, healthDayAverage, formatPct, hasAnyDashboardData, scoreToNum } from "../compute";
+import { excludeAnnotated } from "../annotations";
 import { ScoreCell } from "./ScoreCell";
 import { DashboardHabitManager } from "./DashboardHabitManager";
 
@@ -14,8 +15,11 @@ export function DashboardTable({ year, month }: { year: number; month: number })
 
   const nDays = daysInMonth(year, month);
   const dates = Array.from({ length: nDays }, (_, i) => toDateKey(year, month, i + 1));
+  // Annotated (excluded) days stay visible/editable in the table body below,
+  // but drop out of every "Moyenne du mois" figure in the header row.
+  const statsDates = excludeAnnotated(dates, data.annotations);
 
-  const dailyAverages = dates.map((date) => {
+  const dailyAverages = statsDates.map((date) => {
     const d = data.dashboard[date];
     const hAvg = healthDayAverage(data.health[date], data.healthHabits);
     return hasAnyDashboardData(d, habits) ? dashboardDailyAverage(d, hAvg, habits) : null;
@@ -23,18 +27,18 @@ export function DashboardTable({ year, month }: { year: number; month: number })
   const monthlyAverage = average(dailyAverages);
 
   const monthlyHabitAverages = habits.map((habit) =>
-    average(dates.map((date) => scoreToNum(dashboardHabitValue(data.dashboard[date], habit))))
+    average(statsDates.map((date) => scoreToNum(dashboardHabitValue(data.dashboard[date], habit))))
   );
-  const monthlyHealthAvg = average(dates.map((date) => healthDayAverage(data.health[date], data.healthHabits)));
+  const monthlyHealthAvg = average(statsDates.map((date) => healthDayAverage(data.health[date], data.healthHabits)));
   const monthlyTaskAverages = [1, 2, 3].map((i) =>
     average(
-      dates.map((date) => {
+      statsDates.map((date) => {
         const t = data.dashboard[date]?.[`task${i}` as "task1" | "task2" | "task3"];
         return t ? scoreToNum(t.score) : null;
       })
     )
   );
-  const monthlyDayWin = average(dates.map((date) => scoreToNum(data.dashboard[date]?.dayWin)));
+  const monthlyDayWin = average(statsDates.map((date) => scoreToNum(data.dashboard[date]?.dayWin)));
 
   return (
     <div className="flex flex-col gap-4">
@@ -95,15 +99,19 @@ export function DashboardTable({ year, month }: { year: number; month: number })
             const hAvg = healthDayAverage(data.health[date], data.healthHabits);
             const dailyAvg = hasAnyDashboardData(d, habits) ? dashboardDailyAverage(d, hAvg, habits) : null;
             const today = isToday(date);
+            const annotation = data.annotations.find((a) => date >= a.start && date <= a.end);
+            const rowBg = annotation ? "bg-amber-50/70 dark:bg-amber-950/20" : isWeekend ? "bg-slate-50/60 dark:bg-slate-900/40" : "";
             return (
               <tr
                 key={date}
-                className={`border-t border-slate-100 dark:border-slate-800 ${
-                  isWeekend ? "bg-slate-50/60 dark:bg-slate-900/40" : ""
-                } ${today ? "outline outline-2 outline-offset-[-2px] outline-blue-400/60" : ""}`}
+                className={`border-t border-slate-100 dark:border-slate-800 ${rowBg} ${today ? "outline outline-2 outline-offset-[-2px] outline-blue-400/60" : ""}`}
               >
-                <td className={`sticky left-0 z-10 px-3 py-1.5 capitalize text-slate-700 dark:text-slate-200 ${isWeekend ? "bg-slate-50/60 dark:bg-slate-900/40" : "bg-white dark:bg-slate-950"}`}>
+                <td
+                  className={`sticky left-0 z-10 px-3 py-1.5 capitalize text-slate-700 dark:text-slate-200 ${rowBg || "bg-white dark:bg-slate-950"}`}
+                  title={annotation ? `Exclu des moyennes : ${annotation.label}` : undefined}
+                >
                   {dName}
+                  {annotation && <span className="ml-1 text-amber-500">●</span>}
                 </td>
                 <td className="px-3 py-1.5 text-slate-500 dark:text-slate-400 tabular-nums">{day}</td>
                 <td className="px-3 py-1.5 tabular-nums text-slate-700 dark:text-slate-200 font-medium">{formatPct(dailyAvg)}</td>
