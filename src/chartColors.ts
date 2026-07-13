@@ -18,5 +18,3 @@ export const COLORS = {
     series2: "#199e70",
   },
 };
-
-export type ChartPalette = typeof COLORS.light;

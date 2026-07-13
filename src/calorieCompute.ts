@@ -7,18 +7,6 @@ export function totalCalories(day: CalorieDay | undefined): number | null {
   return meals.reduce((sum: number, m) => sum + (m ?? 0), 0);
 }
 
-export function hasAnyCalorieData(day: CalorieDay | undefined): boolean {
-  if (!day) return false;
-  return (
-    day.weight !== null ||
-    day.breakfast !== null ||
-    day.lunch !== null ||
-    day.dinner !== null ||
-    day.other !== null ||
-    day.protein !== null
-  );
-}
-
 // Mifflin-St Jeor basal metabolic rate — the calories burned at total rest,
 // from weight/height/age/sex alone (no activity factored in yet).
 export function bmr(weightKg: number | null, profile: Profile): number | null {

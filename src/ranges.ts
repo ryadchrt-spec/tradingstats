@@ -73,10 +73,6 @@ export function resolveRange(
   }
 }
 
-export function presetLabel(preset: RangePreset): string {
-  return RANGE_PRESETS.find((p) => p.key === preset)?.label ?? preset;
-}
-
 // Splits a values array into up to `targetPoints` contiguous chunks and
 // averages each — used to keep long ranges (6mo/1yr/all) readable on a chart
 // while short ranges (a month) stay at daily resolution untouched.

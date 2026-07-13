@@ -62,22 +62,9 @@ export function hasAnyDashboardData(d: DashboardDay | undefined, habits: Dashboa
   );
 }
 
-export function hasAnyHealthData(h: HealthDay | undefined, habits: HealthHabitDef[]): boolean {
-  if (!h) return false;
-  return habits.some((habit) => healthHabitValue(h, habit) !== null);
-}
-
 export function formatPct(v: number | null): string {
   if (v === null) return "—";
   return `${Math.round(v * 100)}%`;
-}
-
-export function scoreLabel(v: Score): string {
-  if (v === null) return "";
-  if (v === "na") return "N/A";
-  if (v === 1) return "1";
-  if (v === 0.5) return "½";
-  return "0";
 }
 
 export const SCORE_CYCLE: Score[] = [null, 1, 0.5, 0, "na"];
@@ -85,11 +72,6 @@ export const SCORE_CYCLE: Score[] = [null, 1, 0.5, 0, "na"];
 export function nextScore(v: Score): Score {
   const idx = SCORE_CYCLE.indexOf(v);
   return SCORE_CYCLE[(idx + 1) % SCORE_CYCLE.length];
-}
-
-export interface HabitStat {
-  label: string;
-  value: number | null;
 }
 
 export function currentStreak(dayWins: (number | null)[], threshold = 0.5): number {

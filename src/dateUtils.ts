@@ -26,12 +26,6 @@ export function isToday(dateKey: string): boolean {
   return dateKey === toDateKey(now.getFullYear(), now.getMonth(), now.getDate());
 }
 
-export function isFutureDate(dateKey: string): boolean {
-  const now = new Date();
-  const todayKey = toDateKey(now.getFullYear(), now.getMonth(), now.getDate());
-  return dateKey > todayKey;
-}
-
 export function todayKey(): string {
   const now = new Date();
   return toDateKey(now.getFullYear(), now.getMonth(), now.getDate());
@@ -97,26 +91,6 @@ export function enumerateDateKeys(startKey: string, endKey: string): string[] {
     guard++;
   }
   return out;
-}
-
-export function daysBetweenKeys(startKey: string, endKey: string): number {
-  return Math.round((parseDateKey(endKey).getTime() - parseDateKey(startKey).getTime()) / 86400000) + 1;
-}
-
-export function isoWeekLabel(key: string): string {
-  const d = parseDateKey(key);
-  const dayNum = (d.getUTCDay() + 6) % 7;
-  d.setUTCDate(d.getUTCDate() - dayNum + 3);
-  const firstThursday = new Date(Date.UTC(d.getUTCFullYear(), 0, 4));
-  const week =
-    1 + Math.round(((d.getTime() - firstThursday.getTime()) / 86400000 - 3 + ((firstThursday.getUTCDay() + 6) % 7)) / 7);
-  return `S${week}`;
-}
-
-export function monthLabelFr(key: string): string {
-  const d = parseDateKey(key);
-  const short = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."];
-  return `${short[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
 }
 
 export function shortDateLabelFr(key: string): string {
