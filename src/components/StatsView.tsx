@@ -24,29 +24,6 @@ import {
 type PrimarySelection = RangePreset | "custom";
 type CompareSelection = RangePreset | "none" | "custom";
 
-function habitBreakdown(
-  dates: string[],
-  data: ReturnType<typeof useStore.getState>["data"]
-) {
-  const dashboardBars = DASHBOARD_HABITS.map((h) => ({
-    name: h.short,
-    value: average(dates.map((date) => scoreToNum(data.dashboard[date]?.[h.key]))),
-  }))
-    .filter((b) => b.value !== null)
-    .sort((a, b) => (b.value as number) - (a.value as number))
-    .map((b) => ({ ...b, value: Math.round((b.value as number) * 100) }));
-
-  const healthBars = HEALTH_HABITS.map((h) => ({
-    name: h.short,
-    value: average(dates.map((date) => scoreToNum(data.health[date]?.[h.key]))),
-  }))
-    .filter((b) => b.value !== null)
-    .sort((a, b) => (b.value as number) - (a.value as number))
-    .map((b) => ({ ...b, value: Math.round((b.value as number) * 100) }));
-
-  return { dashboardBars, healthBars };
-}
-
 type CombinedBar = DiffPair & { name: string };
 
 // Same category set as habitBreakdown, but keeps every habit that has data in
@@ -154,25 +131,27 @@ export function StatsView({ year, month }: { year: number; month: number }) {
     compare: isComparing ? compareValues[i] ?? null : undefined,
   }));
 
-  const { dashboardBars, healthBars } = useMemo(() => habitBreakdown(primaryDates, data), [primaryDates.join(","), data]);
   const { dashboardBars: dashboardChartBars, healthBars: healthChartBars } = useMemo(
     () => combinedHabitBreakdown(primaryDates, isComparing ? compareDates : [], data),
     [primaryDates.join(","), isComparing, compareDates.join(","), data]
   );
 
   const monthlyAvg = average(primaryDailyAverages);
+  const compareMonthlyAvg = isComparing ? average(compareDailyAverages) : null;
   const tracked = daysTracked(primaryDailyAverages);
   const streak = currentStreak(primaryDailyAverages);
 
-  // "Day Win" itself — the manually-checked trading outcome, kept separate from the
-  // computed daily average above (mirrors the source spreadsheet's column S).
-  const dayWinValues = primaryDates.map((date) => scoreToNum(data.dashboard[date]?.dayWin));
-  const dayWinPct = average(dayWinValues);
-  const dayWinTracked = daysTracked(dayWinValues);
+  // Émotions — surfaced as its own tile alongside the overall average.
+  const emotionValues = primaryDates.map((date) => scoreToNum(data.dashboard[date]?.controlEmotion));
+  const emotionPct = average(emotionValues);
+  const emotionTracked = daysTracked(emotionValues);
+  const compareEmotionPct = isComparing
+    ? average(compareDates.map((date) => scoreToNum(data.dashboard[date]?.controlEmotion)))
+    : null;
 
-  const allBars = [...dashboardBars, ...healthBars];
-  const best = allBars.length ? allBars.reduce((a, b) => (b.value > a.value ? b : a)) : null;
-  const worst = allBars.length ? allBars.reduce((a, b) => (b.value < a.value ? b : a)) : null;
+  const allBars = [...dashboardChartBars, ...healthChartBars].filter((b) => b.primary !== null);
+  const best = allBars.length ? allBars.reduce((a, b) => ((b.primary as number) > (a.primary as number) ? b : a)) : null;
+  const worst = allBars.length ? allBars.reduce((a, b) => ((b.primary as number) < (a.primary as number) ? b : a)) : null;
 
   const primaryLabel = primaryPreset === "custom" ? "Personnalisé" : RANGE_PRESETS.find((p) => p.key === primaryPreset)?.label;
   const compareLabel = comparePreset === "custom" ? "Personnalisé" : COMPARE_PRESETS.find((p) => p.key === comparePreset)?.label;
@@ -266,11 +245,35 @@ export function StatsView({ year, month }: { year: number; month: number }) {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        <StatTile label="Moyenne journalière" value={monthlyAvg === null ? "—" : `${Math.round(monthlyAvg * 100)}%`} sub={`${tracked}/${primaryDates.length} jours suivis`} />
-        <StatTile label="Day Win" value={dayWinPct === null ? "—" : `${Math.round(dayWinPct * 100)}%`} sub={`${dayWinTracked} jour(s) coché(s)`} />
+        <StatTile
+          label="Moyenne journalière"
+          value={monthlyAvg === null ? "—" : `${Math.round(monthlyAvg * 100)}%`}
+          sub={`${tracked}/${primaryDates.length} jours suivis`}
+          compareValue={isComparing && compareMonthlyAvg !== null ? `${Math.round(compareMonthlyAvg * 100)}%` : undefined}
+          compareColor={c.series2}
+        />
+        <StatTile
+          label="Émotions"
+          value={emotionPct === null ? "—" : `${Math.round(emotionPct * 100)}%`}
+          sub={`${emotionTracked}/${primaryDates.length} jours suivis`}
+          compareValue={isComparing && compareEmotionPct !== null ? `${Math.round(compareEmotionPct * 100)}%` : undefined}
+          compareColor={c.series2}
+        />
         <StatTile label="Série en cours" value={`${streak} j`} sub="Moyenne ≥ 50%" />
-        <StatTile label="Meilleure habitude" value={best ? `${best.value}%` : "—"} sub={best?.name ?? "—"} />
-        <StatTile label="À travailler" value={worst ? `${worst.value}%` : "—"} sub={worst?.name ?? "—"} />
+        <StatTile
+          label="Meilleure habitude"
+          value={best ? `${best.primary}%` : "—"}
+          sub={best?.name ?? "—"}
+          compareValue={isComparing && best?.compareVal != null ? `${best.compareVal}%` : undefined}
+          compareColor={c.series2}
+        />
+        <StatTile
+          label="À travailler"
+          value={worst ? `${worst.primary}%` : "—"}
+          sub={worst?.name ?? "—"}
+          compareValue={isComparing && worst?.compareVal != null ? `${worst.compareVal}%` : undefined}
+          compareColor={c.series2}
+        />
       </div>
 
       <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 p-4">
@@ -345,12 +348,10 @@ export function StatsView({ year, month }: { year: number; month: number }) {
               <XAxis type="number" domain={[0, 100]} tick={{ fill: c.axis, fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v}%`} />
               <YAxis type="category" dataKey="name" tick={{ fill: c.secondary, fontSize: 12 }} axisLine={false} tickLine={false} width={90} />
               <Tooltip content={<ChartTooltip dark={dark} unit="%" />} cursor={{ fill: dark ? "rgba(255,255,255,0.04)" : "rgba(11,11,11,0.03)" }} />
-              <Bar dataKey="primary" fill={c.series1} radius={[0, 4, 4, 0]} maxBarSize={isComparing ? 12 : 16} />
-              {isComparing && (
-                <Bar dataKey="compareVal" fill={c.series2} radius={[0, 4, 4, 0]} maxBarSize={12}>
-                  <LabelList dataKey="diffLabel" position="right" style={{ fill: c.secondary, fontSize: 11 }} />
-                </Bar>
-              )}
+              <Bar dataKey="primary" fill={c.series1} radius={[0, 4, 4, 0]} maxBarSize={isComparing ? 12 : 16}>
+                {isComparing && <LabelList dataKey="diffLabel" position="right" style={{ fill: c.secondary, fontSize: 11 }} />}
+              </Bar>
+              {isComparing && <Bar dataKey="compareVal" fill={c.series2} radius={[0, 4, 4, 0]} maxBarSize={12} />}
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -366,12 +367,10 @@ export function StatsView({ year, month }: { year: number; month: number }) {
               <XAxis type="number" domain={[0, 100]} tick={{ fill: c.axis, fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v}%`} />
               <YAxis type="category" dataKey="name" tick={{ fill: c.secondary, fontSize: 12 }} axisLine={false} tickLine={false} width={90} />
               <Tooltip content={<ChartTooltip dark={dark} unit="%" />} cursor={{ fill: dark ? "rgba(255,255,255,0.04)" : "rgba(11,11,11,0.03)" }} />
-              <Bar dataKey="primary" fill={c.series1} radius={[0, 4, 4, 0]} maxBarSize={isComparing ? 12 : 16} />
-              {isComparing && (
-                <Bar dataKey="compareVal" fill={c.series2} radius={[0, 4, 4, 0]} maxBarSize={12}>
-                  <LabelList dataKey="diffLabel" position="right" style={{ fill: c.secondary, fontSize: 11 }} />
-                </Bar>
-              )}
+              <Bar dataKey="primary" fill={c.series1} radius={[0, 4, 4, 0]} maxBarSize={isComparing ? 12 : 16}>
+                {isComparing && <LabelList dataKey="diffLabel" position="right" style={{ fill: c.secondary, fontSize: 11 }} />}
+              </Bar>
+              {isComparing && <Bar dataKey="compareVal" fill={c.series2} radius={[0, 4, 4, 0]} maxBarSize={12} />}
             </BarChart>
           </ResponsiveContainer>
         </div>

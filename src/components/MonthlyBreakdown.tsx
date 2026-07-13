@@ -69,12 +69,10 @@ export function MonthlyBreakdown({
             <XAxis dataKey="month" tick={{ fill: c.axis, fontSize: 11 }} axisLine={{ stroke: c.grid }} tickLine={false} interval={tickInterval} />
             <YAxis domain={[0, 100]} ticks={[0, 25, 50, 75, 100]} tick={{ fill: c.axis, fontSize: 11 }} axisLine={false} tickLine={false} width={40} tickFormatter={(v) => `${v}%`} />
             <Tooltip content={<ChartTooltip dark={dark} unit="%" />} cursor={{ fill: dark ? "rgba(255,255,255,0.04)" : "rgba(11,11,11,0.03)" }} />
-            <Bar dataKey="primary" fill={c.series1} radius={[4, 4, 0, 0]} maxBarSize={isComparing ? 28 : 48} />
-            {isComparing && (
-              <Bar dataKey="compareVal" fill={c.series2} radius={[4, 4, 0, 0]} maxBarSize={28}>
-                <LabelList dataKey="diffLabel" position="top" style={{ fill: c.secondary, fontSize: 10 }} />
-              </Bar>
-            )}
+            <Bar dataKey="primary" fill={c.series1} radius={[4, 4, 0, 0]} maxBarSize={isComparing ? 28 : 48}>
+              {isComparing && <LabelList dataKey="diffLabel" position="top" style={{ fill: c.secondary, fontSize: 10 }} />}
+            </Bar>
+            {isComparing && <Bar dataKey="compareVal" fill={c.series2} radius={[4, 4, 0, 0]} maxBarSize={28} />}
           </BarChart>
         </ResponsiveContainer>
       </div>
