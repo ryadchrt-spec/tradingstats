@@ -128,6 +128,9 @@ export interface Profile {
   // Daily calorie goal relative to TDEE: negative = deficit (cutting),
   // positive = surplus (bulking), 0 = maintenance.
   calorieGoal: number;
+  // Optional target bodyweight, used to draw a reference line on the weight
+  // chart and project an ETA from the current trend. null = no target set.
+  targetWeightKg: number | null;
 }
 
 // A date range (inclusive) marked out — e.g. vacation, illness — so it can be

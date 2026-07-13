@@ -67,5 +67,6 @@ export function defaultProfile(): Profile {
     activityMultiplier: 1.55,
     proteinPerKg: 2,
     calorieGoal: 0,
+    targetWeightKg: null,
   };
 }

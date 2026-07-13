@@ -72,6 +72,17 @@ export function ProfileSettings() {
               className="rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1 text-sm text-slate-700 dark:text-slate-200"
             />
           </label>
+          <label className="flex flex-col gap-1 text-xs text-slate-500 dark:text-slate-400">
+            Poids cible (kg)
+            <input
+              type="number"
+              step={0.5}
+              value={profile.targetWeightKg ?? ""}
+              onChange={(e) => setProfile({ targetWeightKg: e.target.value === "" ? null : Number(e.target.value) })}
+              placeholder="Optionnel"
+              className="rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1 text-sm text-slate-700 dark:text-slate-200 placeholder:text-slate-400"
+            />
+          </label>
           <label className="flex flex-col gap-1 text-xs text-slate-500 dark:text-slate-400 col-span-2">
             Objectif quotidien (kcal)
             <input

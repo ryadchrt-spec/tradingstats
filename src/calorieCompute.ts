@@ -1,4 +1,5 @@
 import type { CalorieDay, Profile } from "./types";
+import { parseDateKey, addDaysToKey } from "./dateUtils";
 
 export function totalCalories(day: CalorieDay | undefined): number | null {
   if (!day) return null;
@@ -73,6 +74,46 @@ export function chartDomain(values: number[], paddingRatio = 0.15, minPadding = 
   const max = Math.max(...values);
   const pad = Math.max(minPadding, (max - min) * paddingRatio);
   return [Math.floor(min - pad), Math.ceil(max + pad)];
+}
+
+export type GoalProjection =
+  | { status: "no-target" }
+  | { status: "not-enough-data" }
+  | { status: "reached" }
+  | { status: "diverging" }
+  | { status: "projected"; date: string; daysAhead: number };
+
+// Extrapolates the tracked weight trend (simple linear regression over the
+// selected period, days-since-start vs weight — more robust against noisy
+// day-to-day fluctuations than just comparing the first/last points) to
+// estimate when the target weight will be reached.
+export function projectGoalDate(weightPoints: { date: string; weight: number }[], targetWeightKg: number | null): GoalProjection {
+  if (targetWeightKg === null) return { status: "no-target" };
+  if (weightPoints.length < 2) return { status: "not-enough-data" };
+
+  const firstMs = parseDateKey(weightPoints[0].date).getTime();
+  const xs = weightPoints.map((p) => (parseDateKey(p.date).getTime() - firstMs) / 86_400_000);
+  const ys = weightPoints.map((p) => p.weight);
+  const lastWeight = ys[ys.length - 1];
+  if (Math.abs(lastWeight - targetWeightKg) < 0.1) return { status: "reached" };
+
+  const n = xs.length;
+  const meanX = xs.reduce((a, b) => a + b, 0) / n;
+  const meanY = ys.reduce((a, b) => a + b, 0) / n;
+  let num = 0;
+  let den = 0;
+  for (let i = 0; i < n; i++) {
+    num += (xs[i] - meanX) * (ys[i] - meanY);
+    den += (xs[i] - meanX) ** 2;
+  }
+  const slope = den === 0 ? 0 : num / den; // kg/day
+  if (slope === 0) return { status: "diverging" };
+
+  const daysAhead = (targetWeightKg - lastWeight) / slope;
+  if (daysAhead <= 0) return { status: "diverging" };
+
+  const date = addDaysToKey(weightPoints[weightPoints.length - 1].date, Math.round(daysAhead));
+  return { status: "projected", date, daysAhead: Math.round(daysAhead) };
 }
 
 export function formatNum(v: number | null, decimals = 0): string {

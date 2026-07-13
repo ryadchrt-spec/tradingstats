@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
-import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine } from "recharts";
 import { useStore } from "../store";
 import { shortDateLabelFr } from "../dateUtils";
-import { totalCalories, calorieTarget, calorieDeficit, proteinTarget, theoreticalKgChange, formatNum, formatSigned, chartDomain } from "../calorieCompute";
+import { totalCalories, calorieTarget, calorieDeficit, proteinTarget, theoreticalKgChange, formatNum, formatSigned, chartDomain, projectGoalDate } from "../calorieCompute";
 import { useDarkMode } from "../useDarkMode";
 import { StatTile } from "./StatItem";
 import { ChartTooltip } from "./ChartTooltip";
@@ -81,6 +81,10 @@ export function CaloriesPage({ year, month }: { year: number; month: number }) {
   const weightPoints = rows.filter((r) => r.weight !== null);
   const actualKgChange =
     weightPoints.length >= 2 ? (weightPoints[weightPoints.length - 1].weight as number) - (weightPoints[0].weight as number) : null;
+  const goalProjection = projectGoalDate(
+    weightPoints.map((r) => ({ date: r.date, weight: r.weight as number })),
+    profile.targetWeightKg
+  );
 
   const intakeDays = rows.filter((r) => r.intake !== null);
   const avgIntake = intakeDays.length ? intakeDays.reduce((s, r) => s + (r.intake as number), 0) / intakeDays.length : null;
@@ -138,6 +142,7 @@ export function CaloriesPage({ year, month }: { year: number; month: number }) {
   // Zoomed into each chart's own value range (like the weight chart) so
   // small day-to-day variations stay visible regardless of scale.
   const weightValues = weightData.flatMap((r) => [r.value, r.compareValue]).filter((v): v is number => v !== null && v !== undefined);
+  if (profile.targetWeightKg !== null) weightValues.push(profile.targetWeightKg);
   const weightDomain = chartDomain(weightValues, 0.15, 1);
 
   const calorieValues = calorieData.flatMap((r) => [r.intake, r.secondary]).filter((v): v is number => v !== null && v !== undefined);
@@ -147,6 +152,21 @@ export function CaloriesPage({ year, month }: { year: number; month: number }) {
   const proteinDomain = chartDomain(proteinValues, 0.15, 5);
 
   const secondaryLabel = isComparing ? compareLabel : "Objectif";
+
+  const goalProjectionText = (() => {
+    switch (goalProjection.status) {
+      case "no-target":
+        return { value: "—", sub: "Définis un poids cible dans le profil" };
+      case "not-enough-data":
+        return { value: "—", sub: "Pas assez de pesées sur la période" };
+      case "reached":
+        return { value: "Atteint 🎉", sub: "" };
+      case "diverging":
+        return { value: "—", sub: "La tendance actuelle ne mène pas à l'objectif" };
+      case "projected":
+        return { value: shortDateLabelFr(goalProjection.date), sub: `Dans ~${goalProjection.daysAhead} j au rythme actuel` };
+    }
+  })();
 
   return (
     <div className="flex flex-col gap-6">
@@ -200,7 +220,7 @@ export function CaloriesPage({ year, month }: { year: number; month: number }) {
         )}
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         <StatTile
           label="Déficit total"
           value={trackedDeficitDays ? `${formatSigned(totalDeficit)} kcal` : "—"}
@@ -236,6 +256,7 @@ export function CaloriesPage({ year, month }: { year: number; month: number }) {
           compareValue={isComparing && compareAvgProtein !== null ? `${formatNum(compareAvgProtein)} g` : undefined}
           compareColor={c.series2}
         />
+        <StatTile label="Objectif poids" value={goalProjectionText.value} sub={goalProjectionText.sub} />
       </div>
 
       <div className="grid md:grid-cols-3 gap-4">
@@ -268,6 +289,14 @@ export function CaloriesPage({ year, month }: { year: number; month: number }) {
                 tickFormatter={(v) => `${v}`}
               />
               <Tooltip content={<ChartTooltip dark={dark} unit=" kg" />} cursor={{ stroke: c.grid }} />
+              {profile.targetWeightKg !== null && (
+                <ReferenceLine
+                  y={profile.targetWeightKg}
+                  stroke={c.series2}
+                  strokeDasharray="4 3"
+                  label={{ value: "Objectif", position: "insideTopRight", fill: c.secondary, fontSize: 10 }}
+                />
+              )}
               <Line type="monotone" dataKey="value" stroke={c.series1} strokeWidth={2} dot={false} activeDot={{ r: 4, fill: c.series1, stroke: c.surface, strokeWidth: 2 }} connectNulls />
               {isComparing && (
                 <Line
