@@ -73,39 +73,6 @@ export function resolveRange(
   }
 }
 
-// Splits a values array into up to `targetPoints` contiguous chunks and
-// averages each — used to keep long ranges (6mo/1yr/all) readable on a chart
-// while short ranges (a month) stay at daily resolution untouched.
-export function chunkAverage(values: (number | null)[], targetPoints: number): (number | null)[] {
-  const n = values.length;
-  if (n === 0) return [];
-  const points = Math.min(targetPoints, n);
-  const out: (number | null)[] = [];
-  for (let i = 0; i < points; i++) {
-    const start = Math.floor((i * n) / points);
-    const end = Math.max(start + 1, Math.floor(((i + 1) * n) / points));
-    const slice = values.slice(start, end);
-    const nums = slice.filter((v): v is number => v !== null);
-    out.push(nums.length === 0 ? null : nums.reduce((a, b) => a + b, 0) / nums.length);
-  }
-  return out;
-}
-
-// Same chunking, but returns the representative (middle) date key of each
-// chunk instead of the averaged value — used for x-axis labels.
-export function chunkDates(dates: string[], targetPoints: number): string[] {
-  const n = dates.length;
-  if (n === 0) return [];
-  const points = Math.min(targetPoints, n);
-  const out: string[] = [];
-  for (let i = 0; i < points; i++) {
-    const start = Math.floor((i * n) / points);
-    const end = Math.max(start + 1, Math.floor(((i + 1) * n) / points));
-    out.push(dates[Math.floor((start + end - 1) / 2)]);
-  }
-  return out;
-}
-
 export function rangeDates(range: DateRange): string[] {
   return enumerateDateKeys(range.start, range.end);
 }
