@@ -15,7 +15,6 @@ import {
   COMPARE_PRESETS,
   resolveRange,
   rangeDates,
-  monthBuckets,
   tickIntervalFor,
   niceAxisDomain,
   type RangePreset,
@@ -116,36 +115,19 @@ export function StatsView({ year, month }: { year: number; month: number }) {
     [data, compareDates.join(",")]
   );
 
-  // The curve's granularity follows the chosen duration: a period within a
-  // single month plots daily, anything spanning 2+ calendar months plots one
-  // point per month instead (same buckets as "Moyenne par mois" below), so a
-  // multi-year "Tout" selection doesn't cram hundreds of days into one line.
-  const primaryBuckets = useMemo(() => monthBuckets(primaryDates), [primaryDates.join(",")]);
-  const compareBuckets = useMemo(() => (isComparing ? monthBuckets(compareDates) : []), [isComparing, compareDates.join(",")]);
-  const useMonthlyGranularity = primaryBuckets.length >= 2;
-  const dateIndex = useMemo(() => new Map(primaryDates.map((d, i) => [d, i])), [primaryDates.join(",")]);
-  const compareDateIndex = useMemo(() => new Map(compareDates.map((d, i) => [d, i])), [compareDates.join(",")]);
-
-  const lineData = useMonthlyGranularity
-    ? primaryBuckets.map((b, i) => {
-        const primaryAvg = average(b.dates.map((d) => primaryDailyAverages[dateIndex.get(d) ?? -1] ?? null));
-        const cBucket = compareBuckets[i];
-        const compareAvg = isComparing && cBucket ? average(cBucket.dates.map((d) => compareDailyAverages[compareDateIndex.get(d) ?? -1] ?? null)) : null;
-        return {
-          x: b.label,
-          primary: primaryAvg === null ? null : Math.round(primaryAvg * 100),
-          compare: isComparing ? (compareAvg === null ? null : Math.round(compareAvg * 100)) : undefined,
-        };
-      })
-    : primaryDates.map((date, i) => {
-        const primaryVal = primaryDailyAverages[i] ?? null;
-        const compareVal = compareDailyAverages[i] ?? null;
-        return {
-          x: primaryPreset === "month" ? i + 1 : shortDateLabelFr(date),
-          primary: primaryVal === null ? null : Math.round(primaryVal * 100),
-          compare: isComparing ? (compareVal === null ? null : Math.round(compareVal * 100)) : undefined,
-        };
-      });
+  // Every day of the selected period gets its own point — no averaging into
+  // months — so the curve shows the real day-to-day picture regardless of
+  // how long the period is. Readability over long periods (e.g. "Tout") is
+  // handled by thinning the X-axis tick labels, not by dropping data points.
+  const lineData = primaryDates.map((date, i) => {
+    const primaryVal = primaryDailyAverages[i] ?? null;
+    const compareVal = compareDailyAverages[i] ?? null;
+    return {
+      x: primaryPreset === "month" ? i + 1 : shortDateLabelFr(date),
+      primary: primaryVal === null ? null : Math.round(primaryVal * 100),
+      compare: isComparing ? (compareVal === null ? null : Math.round(compareVal * 100)) : undefined,
+    };
+  });
 
   // Zoom the Y-axis into the curve's actual range (±5 pts) instead of always
   // spanning the full 0-100%, which flattened out real variation.
