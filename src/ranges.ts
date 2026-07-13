@@ -122,6 +122,21 @@ export function tickIntervalFor(count: number, target: number): number {
   return count > target ? Math.ceil(count / target) - 1 : 0;
 }
 
+// Zooms a 0-100 percentage axis into the data's actual range with a fixed
+// padding, then rounds the bounds outward to the padding step and generates
+// ticks at that same step. Rounding to "nice" numbers ourselves (rather than
+// leaving it to recharts' automatic tick generation) keeps the axis tight to
+// the data — recharts' own nice-tick rounding can otherwise pad the visible
+// range well past what was asked for, leaving an ugly empty band at the top.
+export function niceAxisDomain(values: number[], padding = 5, step = 5): { domain: [number, number]; ticks: number[] } {
+  if (!values.length) return { domain: [0, 100], ticks: [0, 25, 50, 75, 100] };
+  const min = Math.max(0, Math.floor((Math.min(...values) - padding) / step) * step);
+  const max = Math.min(100, Math.ceil((Math.max(...values) + padding) / step) * step);
+  const ticks: number[] = [];
+  for (let t = min; t <= max; t += step) ticks.push(t);
+  return { domain: [min, max], ticks };
+}
+
 export interface MonthBucket {
   key: string; // YYYY-MM
   label: string; // "Juil. 2026"
