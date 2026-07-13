@@ -64,7 +64,7 @@ export function scoreLabel(v: Score): string {
   return "0";
 }
 
-export const SCORE_CYCLE: Score[] = [null, 0, 0.5, 1, "na"];
+export const SCORE_CYCLE: Score[] = [null, 1, 0.5, 0, "na"];
 
 export function nextScore(v: Score): Score {
   const idx = SCORE_CYCLE.indexOf(v);
