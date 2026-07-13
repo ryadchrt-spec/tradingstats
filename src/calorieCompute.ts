@@ -68,6 +68,17 @@ export function theoreticalKgChange(totalDeficit: number): number {
   return -totalDeficit / KCAL_PER_KG;
 }
 
+// Zooms a chart's Y-axis into the actual spread of its values (like the
+// weight chart) instead of always anchoring at 0, so small variations stay
+// readable regardless of the series' magnitude (kg, kcal, g).
+export function chartDomain(values: number[], paddingRatio = 0.15, minPadding = 1): [number, number] {
+  if (!values.length) return [0, 100];
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const pad = Math.max(minPadding, (max - min) * paddingRatio);
+  return [Math.floor(min - pad), Math.ceil(max + pad)];
+}
+
 export function formatNum(v: number | null, decimals = 0): string {
   if (v === null || Number.isNaN(v)) return "—";
   return v.toLocaleString("fr-FR", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });

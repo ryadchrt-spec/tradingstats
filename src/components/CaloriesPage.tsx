@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
 import { useStore } from "../store";
 import { shortDateLabelFr } from "../dateUtils";
-import { totalCalories, calorieTarget, calorieDeficit, proteinTarget, theoreticalKgChange, formatNum, formatSigned } from "../calorieCompute";
+import { totalCalories, calorieTarget, calorieDeficit, proteinTarget, theoreticalKgChange, formatNum, formatSigned, chartDomain } from "../calorieCompute";
 import { useDarkMode } from "../useDarkMode";
 import { StatTile } from "./StatItem";
 import { ChartTooltip } from "./ChartTooltip";
@@ -76,10 +76,16 @@ export function CaloriesPage({ year, month }: { year: number; month: number }) {
 
   // Computed explicitly instead of via recharts' "dataMin"/"dataMax" domain
   // strings, which mis-render when the series starts with a run of nulls.
+  // Zoomed into each chart's own value range (like the weight chart) so
+  // small day-to-day variations stay visible regardless of scale.
   const weightValues = weightChunked.filter((v): v is number => v !== null);
-  const weightDomain: [number, number] = weightValues.length
-    ? [Math.floor(Math.min(...weightValues) - 1), Math.ceil(Math.max(...weightValues) + 1)]
-    : [0, 100];
+  const weightDomain = chartDomain(weightValues, 0.15, 1);
+
+  const calorieValues = [...intakeChunked, ...objectifChunked].filter((v): v is number => v !== null);
+  const calorieDomain = chartDomain(calorieValues, 0.15, 50);
+
+  const proteinValues = [...proteinChunked, ...proteinObjChunked].filter((v): v is number => v !== null);
+  const proteinDomain = chartDomain(proteinValues, 0.15, 5);
 
   return (
     <div className="flex flex-col gap-6">
@@ -172,7 +178,7 @@ export function CaloriesPage({ year, month }: { year: number; month: number }) {
             <LineChart data={calorieData} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
               <CartesianGrid vertical={false} stroke={c.grid} />
               <XAxis dataKey="x" tick={{ fill: c.axis, fontSize: 11 }} axisLine={{ stroke: c.grid }} tickLine={false} interval={Math.max(0, Math.floor(calorieData.length / 8))} />
-              <YAxis tick={{ fill: c.axis, fontSize: 11 }} axisLine={false} tickLine={false} width={36} />
+              <YAxis domain={calorieDomain} tick={{ fill: c.axis, fontSize: 11 }} axisLine={false} tickLine={false} width={36} />
               <Tooltip content={<ChartTooltip dark={dark} unit=" kcal" />} cursor={{ stroke: c.grid }} />
               <Line type="monotone" dataKey="intake" stroke={c.series1} strokeWidth={2} dot={false} activeDot={{ r: 4, fill: c.series1, stroke: c.surface, strokeWidth: 2 }} connectNulls />
               <Line type="monotone" dataKey="objectif" stroke={c.series2} strokeWidth={2} strokeDasharray="4 3" dot={false} activeDot={{ r: 4, fill: c.series2, stroke: c.surface, strokeWidth: 2 }} connectNulls />
@@ -198,7 +204,7 @@ export function CaloriesPage({ year, month }: { year: number; month: number }) {
             <LineChart data={proteinData} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
               <CartesianGrid vertical={false} stroke={c.grid} />
               <XAxis dataKey="x" tick={{ fill: c.axis, fontSize: 11 }} axisLine={{ stroke: c.grid }} tickLine={false} interval={Math.max(0, Math.floor(proteinData.length / 8))} />
-              <YAxis tick={{ fill: c.axis, fontSize: 11 }} axisLine={false} tickLine={false} width={36} />
+              <YAxis domain={proteinDomain} tick={{ fill: c.axis, fontSize: 11 }} axisLine={false} tickLine={false} width={36} />
               <Tooltip content={<ChartTooltip dark={dark} unit=" g" />} cursor={{ stroke: c.grid }} />
               <Line type="monotone" dataKey="protein" stroke={c.series1} strokeWidth={2} dot={false} activeDot={{ r: 4, fill: c.series1, stroke: c.surface, strokeWidth: 2 }} connectNulls />
               <Line type="monotone" dataKey="objectif" stroke={c.series2} strokeWidth={2} strokeDasharray="4 3" dot={false} activeDot={{ r: 4, fill: c.series2, stroke: c.surface, strokeWidth: 2 }} connectNulls />
