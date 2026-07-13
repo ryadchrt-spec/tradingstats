@@ -42,7 +42,7 @@ export function CaloriesTable({ year, month }: { year: number; month: number }) 
             ))}
             <th className="px-2 py-2 text-right font-medium min-w-[80px]">Total Cal</th>
             <th className="px-2 py-2 text-right font-medium min-w-[80px]">Objectif</th>
-            <th className="px-2 py-2 text-right font-medium min-w-[80px]">Déficit</th>
+            <th className="px-2 py-2 text-right font-medium min-w-[90px]">Déficit / Surplus</th>
             <th className="px-2 py-2 text-right font-medium min-w-[70px]">Protéine</th>
             <th className="px-2 py-2 text-right font-medium min-w-[80px]">Obj. Prot.</th>
           </tr>
@@ -53,7 +53,7 @@ export function CaloriesTable({ year, month }: { year: number; month: number }) 
             <th className="px-2 py-2" colSpan={4}></th>
             <th className="px-2 py-2 text-right tabular-nums font-normal">{formatNum(monthlyTotals)}</th>
             <th className="px-2 py-2 text-right tabular-nums font-normal">{formatNum(monthlyTarget)}</th>
-            <th className="px-2 py-2 text-right tabular-nums font-normal">{formatSigned(monthlyDeficit)}</th>
+            <th className="px-2 py-2 text-right tabular-nums font-normal">{formatSigned(monthlyDeficit === null ? null : -monthlyDeficit)}</th>
             <th className="px-2 py-2 text-right tabular-nums font-normal">{formatNum(monthlyProtein)}</th>
             <th className="px-2 py-2 text-right tabular-nums font-normal">{formatNum(monthlyProteinTarget)}</th>
           </tr>
@@ -91,7 +91,9 @@ export function CaloriesTable({ year, month }: { year: number; month: number }) 
                 <td className="px-2 py-1.5 text-right tabular-nums text-slate-700 dark:text-slate-200 font-medium">{formatNum(total)}</td>
                 <td className="px-2 py-1.5 text-right tabular-nums text-slate-500 dark:text-slate-400">{formatNum(objectif)}</td>
                 <td className={`px-2 py-1.5 text-right tabular-nums font-medium ${deficit !== null && deficit < 0 ? "text-rose-500 dark:text-rose-400" : "text-slate-700 dark:text-slate-200"}`}>
-                  {formatSigned(deficit)}
+                  {/* Displayed inverted from calorieDeficit's raw sign: a deficit
+                      (below maintenance) reads as negative, a surplus as positive. */}
+                  {formatSigned(deficit === null ? null : -deficit)}
                 </td>
                 <td className="px-2 py-1.5">
                   <NumberCell value={cal?.protein ?? null} onChange={(v) => setCalorieValue(date, "protein", v)} step={5} />
