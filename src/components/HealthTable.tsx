@@ -1,5 +1,5 @@
 import { useStore } from "../store";
-import { daysInMonth, dayNameFr, toDateKey, isToday } from "../dateUtils";
+import { daysInMonth, dayNameFr, toDateKey, isToday, monthKey } from "../dateUtils";
 import { average, healthDayAverage, healthHabitValue, formatPct, scoreToNum } from "../compute";
 import { ScoreCell } from "./ScoreCell";
 import { HealthHabitManager } from "./HealthHabitManager";
@@ -8,6 +8,7 @@ export function HealthTable({ year, month }: { year: number; month: number }) {
   const data = useStore((s) => s.data);
   const setHealthHabitValue = useStore((s) => s.setHealthHabitValue);
   const habits = data.healthHabits;
+  const mKey = monthKey(year, month);
 
   const nDays = daysInMonth(year, month);
   const dates = Array.from({ length: nDays }, (_, i) => toDateKey(year, month, i + 1));
@@ -19,7 +20,7 @@ export function HealthTable({ year, month }: { year: number; month: number }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <HealthHabitManager />
+      <HealthHabitManager year={year} month={month} />
       <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-800">
       <table className="min-w-full border-collapse text-sm">
         <thead>
@@ -30,7 +31,7 @@ export function HealthTable({ year, month }: { year: number; month: number }) {
             {habits.map((h) => (
               <th key={h.id} className="px-2 py-2 text-center font-medium min-w-[80px]">
                 {h.short}
-                {h.target != null && <span className="block text-[10px] font-normal normal-case text-slate-400">🎯 {h.target}%</span>}
+                {h.targets?.[mKey] != null && <span className="block text-[10px] font-normal normal-case text-slate-400">🎯 {h.targets[mKey]}%</span>}
               </th>
             ))}
           </tr>
@@ -39,7 +40,7 @@ export function HealthTable({ year, month }: { year: number; month: number }) {
             <th className="px-3 py-2"></th>
             <th className="px-3 py-2 text-left tabular-nums">{formatPct(monthlyOverall)}</th>
             {monthlyHabitAverages.map((v, i) => {
-              const target = habits[i]?.target;
+              const target = habits[i]?.targets?.[mKey];
               const pct = v === null ? null : Math.round(v * 100);
               const met = target != null && pct !== null ? pct >= target : null;
               return (

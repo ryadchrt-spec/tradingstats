@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, LabelList } from "recharts";
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, LabelList, Cell } from "recharts";
 import type { AppData } from "../types";
 import { average, scoreToNum, dashboardHabitValue, healthHabitValue, toDiffPair } from "../compute";
 import { monthBuckets, tickIntervalFor } from "../ranges";
@@ -42,18 +42,19 @@ export function MonthlyBreakdown({
     return { month: b.label, ...toDiffPair(primaryVal, compareVal) };
   });
 
-  function series(valueAt: (dates: string[]) => number | null) {
+  function series(valueAt: (dates: string[]) => number | null, targets?: Record<string, number>) {
     return buckets.map((b, i) => {
       const primaryVal = valueAt(b.dates);
       const cBucket = compareBuckets[i];
       const compareVal = cBucket ? valueAt(cBucket.dates) : null;
-      return { month: b.label, ...toDiffPair(primaryVal, compareVal) };
+      const target = targets?.[b.key] ?? null;
+      return { month: b.label, target, ...toDiffPair(primaryVal, compareVal) };
     });
   }
   const dashboardHabitSeries = (habit: AppData["dashboardHabits"][number]) =>
-    series((dates) => average(dates.map((d) => scoreToNum(dashboardHabitValue(data.dashboard[d], habit)))));
+    series((dates) => average(dates.map((d) => scoreToNum(dashboardHabitValue(data.dashboard[d], habit)))), habit.targets);
   const healthHabitSeries = (habit: AppData["healthHabits"][number]) =>
-    series((dates) => average(dates.map((d) => scoreToNum(healthHabitValue(data.health[d], habit)))));
+    series((dates) => average(dates.map((d) => scoreToNum(healthHabitValue(data.health[d], habit)))), habit.targets);
 
   // Full-width chart has room for more labels than the mini per-habit ones.
   const tickInterval = tickIntervalFor(buckets.length, 10);
@@ -97,6 +98,15 @@ export function MonthlyBreakdown({
   );
 }
 
+// When a habit had a target set for that specific month, color that month's
+// bar green (met/exceeded) or red (below) instead of the default blue — an
+// at-a-glance status per month. Only meaningful outside comparison mode,
+// where each bar unambiguously represents one primary-period month.
+function monthTargetColor(point: { primary: number | null; target: number | null }, defaultColor: string, metColor: string): string {
+  if (point.target == null || point.primary === null) return defaultColor;
+  return point.primary >= point.target ? metColor : "#d03b3b";
+}
+
 function MiniMonthChart({
   title,
   data,
@@ -106,7 +116,7 @@ function MiniMonthChart({
   dark,
 }: {
   title: string;
-  data: { month: string; primary: number | null; compareVal: number | null }[];
+  data: { month: string; primary: number | null; compareVal: number | null; target: number | null }[];
   color: string;
   compareColor: string;
   isComparing: boolean;
@@ -123,7 +133,9 @@ function MiniMonthChart({
           <XAxis dataKey="month" tick={{ fill: c.axis, fontSize: 8 }} axisLine={{ stroke: c.grid }} tickLine={false} interval={tickInterval} />
           <YAxis domain={[0, 100]} ticks={[0, 25, 50, 75, 100]} tick={{ fill: c.axis, fontSize: 8 }} axisLine={false} tickLine={false} width={30} tickFormatter={(v) => `${v}%`} />
           <Tooltip content={<ChartTooltip dark={dark} unit="%" />} cursor={{ fill: dark ? "rgba(255,255,255,0.04)" : "rgba(11,11,11,0.03)" }} />
-          <Bar dataKey="primary" fill={color} radius={[3, 3, 0, 0]} maxBarSize={isComparing ? 14 : 28} />
+          <Bar dataKey="primary" fill={color} radius={[3, 3, 0, 0]} maxBarSize={isComparing ? 14 : 28}>
+            {!isComparing && data.map((point, i) => <Cell key={i} fill={monthTargetColor(point, color, compareColor)} />)}
+          </Bar>
           {isComparing && <Bar dataKey="compareVal" fill={compareColor} radius={[3, 3, 0, 0]} maxBarSize={14} />}
         </BarChart>
       </ResponsiveContainer>

@@ -37,8 +37,9 @@ export interface DashboardHabitDef {
   id: string;
   short: string;
   builtin: boolean;
-  // Personal target for this habit, as a 0-100 percentage. null = no target set.
-  target: number | null;
+  // Personal target for this habit, as a 0-100 percentage, independent per
+  // calendar month — keyed by "YYYY-MM". A missing key means no target set that month.
+  targets: Record<string, number>;
 }
 
 export interface HealthDay {
@@ -66,8 +67,9 @@ export interface HealthHabitDef {
   id: string;
   short: string;
   builtin: boolean;
-  // Personal target for this habit, as a 0-100 percentage. null = no target set.
-  target: number | null;
+  // Personal target for this habit, as a 0-100 percentage, independent per
+  // calendar month — keyed by "YYYY-MM". A missing key means no target set that month.
+  targets: Record<string, number>;
 }
 
 export type DashboardKey =

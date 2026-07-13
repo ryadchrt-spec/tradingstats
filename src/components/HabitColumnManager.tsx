@@ -3,12 +3,14 @@ import { useState } from "react";
 interface HabitLike {
   id: string;
   short: string;
-  target: number | null;
+  targets: Record<string, number>;
 }
 
 export function HabitColumnManager({
   title,
   habits,
+  monthKey,
+  monthLabel,
   onAdd,
   onRemove,
   onRename,
@@ -17,6 +19,8 @@ export function HabitColumnManager({
 }: {
   title: string;
   habits: HabitLike[];
+  monthKey: string;
+  monthLabel: string;
   onAdd: (short: string) => void;
   onRemove: (id: string) => void;
   onRename: (id: string, short: string) => void;
@@ -47,7 +51,7 @@ export function HabitColumnManager({
             <div className="flex items-center gap-2 text-[11px] uppercase tracking-wide text-slate-400 dark:text-slate-500">
               <div className="w-4 shrink-0" />
               <div className="flex-1">Nom</div>
-              <div className="w-24 shrink-0">Objectif %</div>
+              <div className="w-24 shrink-0">Objectif % ({monthLabel})</div>
               <div className="w-7 shrink-0" />
             </div>
           )}
@@ -84,10 +88,10 @@ export function HabitColumnManager({
                 min={0}
                 max={100}
                 step={5}
-                value={h.target ?? ""}
+                value={h.targets?.[monthKey] ?? ""}
                 onChange={(e) => onSetTarget(h.id, e.target.value === "" ? null : Math.max(0, Math.min(100, Number(e.target.value))))}
                 placeholder="Objectif %"
-                title="Objectif personnel (%) — laisser vide pour aucun objectif"
+                title={`Objectif personnel (%) pour ${monthLabel} — laisser vide pour aucun objectif`}
                 className="w-24 shrink-0 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1 text-sm text-slate-700 dark:text-slate-200 placeholder:text-slate-400 placeholder:text-xs"
               />
               <button

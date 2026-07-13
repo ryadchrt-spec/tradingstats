@@ -33,14 +33,14 @@ interface Store {
   removeDashboardHabit: (id: string) => void;
   renameDashboardHabit: (id: string, short: string) => void;
   moveDashboardHabit: (id: string, direction: "up" | "down") => void;
-  setDashboardHabitTarget: (id: string, target: number | null) => void;
+  setDashboardHabitTarget: (id: string, monthKey: string, target: number | null) => void;
   setHealthValue: (date: string, key: HealthKey, value: Score) => void;
   setHealthHabitValue: (date: string, habitId: string, value: Score) => void;
   addHealthHabit: (short: string) => void;
   removeHealthHabit: (id: string) => void;
   renameHealthHabit: (id: string, short: string) => void;
   moveHealthHabit: (id: string, direction: "up" | "down") => void;
-  setHealthHabitTarget: (id: string, target: number | null) => void;
+  setHealthHabitTarget: (id: string, monthKey: string, target: number | null) => void;
   setTask: (date: string, taskIndex: 1 | 2 | 3, entry: Partial<TaskEntry>) => void;
   setCalorieValue: (date: string, key: keyof Omit<CalorieDay, "date">, value: number | null) => void;
   setProfile: (partial: Partial<Profile>) => void;
@@ -91,7 +91,7 @@ export const useStore = create<Store>()(
         set((state) => ({
           data: {
             ...state.data,
-            dashboardHabits: [...state.data.dashboardHabits, { id: makeHabitId(), short: short.trim() || "Habitude", builtin: false, target: null }],
+            dashboardHabits: [...state.data.dashboardHabits, { id: makeHabitId(), short: short.trim() || "Habitude", builtin: false, targets: {} }],
           },
         })),
 
@@ -121,11 +121,17 @@ export const useStore = create<Store>()(
           return { data: { ...state.data, dashboardHabits: list } };
         }),
 
-      setDashboardHabitTarget: (id, target) =>
+      setDashboardHabitTarget: (id, monthKey, target) =>
         set((state) => ({
           data: {
             ...state.data,
-            dashboardHabits: state.data.dashboardHabits.map((h) => (h.id === id ? { ...h, target } : h)),
+            dashboardHabits: state.data.dashboardHabits.map((h) => {
+              if (h.id !== id) return h;
+              const targets = { ...h.targets };
+              if (target === null) delete targets[monthKey];
+              else targets[monthKey] = target;
+              return { ...h, targets };
+            }),
           },
         })),
 
@@ -163,7 +169,7 @@ export const useStore = create<Store>()(
         set((state) => ({
           data: {
             ...state.data,
-            healthHabits: [...state.data.healthHabits, { id: makeHabitId(), short: short.trim() || "Habitude", builtin: false, target: null }],
+            healthHabits: [...state.data.healthHabits, { id: makeHabitId(), short: short.trim() || "Habitude", builtin: false, targets: {} }],
           },
         })),
 
@@ -193,11 +199,17 @@ export const useStore = create<Store>()(
           return { data: { ...state.data, healthHabits: list } };
         }),
 
-      setHealthHabitTarget: (id, target) =>
+      setHealthHabitTarget: (id, monthKey, target) =>
         set((state) => ({
           data: {
             ...state.data,
-            healthHabits: state.data.healthHabits.map((h) => (h.id === id ? { ...h, target } : h)),
+            healthHabits: state.data.healthHabits.map((h) => {
+              if (h.id !== id) return h;
+              const targets = { ...h.targets };
+              if (target === null) delete targets[monthKey];
+              else targets[monthKey] = target;
+              return { ...h, targets };
+            }),
           },
         })),
 

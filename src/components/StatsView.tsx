@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, BarChart, Bar, Cell, LabelList } from "recharts";
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, BarChart, Bar, LabelList } from "recharts";
 import { useStore } from "../store";
 import type { AppData } from "../types";
 import { shortDateLabelFr, todayKey, currentMonthStr, shiftMonthStr, monthStrToFirstDay, monthStrToLastDay } from "../dateUtils";
@@ -23,7 +23,7 @@ import {
 type PrimarySelection = RangePreset | "custom";
 type CompareSelection = RangePreset | "none" | "custom";
 
-type CombinedBar = DiffPair & { name: string; target: number | null };
+type CombinedBar = DiffPair & { name: string };
 
 // Same category set as habitBreakdown, but keeps every habit that has data in
 // EITHER period (not just the primary one) so a comparison bar never goes missing,
@@ -33,10 +33,10 @@ function combinedHabitBreakdown(
   compareDates: string[],
   data: AppData
 ): { dashboardBars: CombinedBar[]; healthBars: CombinedBar[] } {
-  function summarize(name: string, target: number | null, valueAt: (date: string) => number | null): CombinedBar {
+  function summarize(name: string, valueAt: (date: string) => number | null): CombinedBar {
     const primary = average(primaryDates.map(valueAt));
     const compare = compareDates.length ? average(compareDates.map(valueAt)) : null;
-    return { name, target, ...toDiffPair(primary, compare) };
+    return { name, ...toDiffPair(primary, compare) };
   }
   function finish(bars: CombinedBar[]): CombinedBar[] {
     return bars.filter((r) => r.primary !== null || r.compareVal !== null).sort((a, b) => (b.primary ?? -1) - (a.primary ?? -1));
@@ -44,20 +44,12 @@ function combinedHabitBreakdown(
 
   return {
     dashboardBars: finish(
-      data.dashboardHabits.map((h) => summarize(h.short, h.target, (date) => scoreToNum(dashboardHabitValue(data.dashboard[date], h))))
+      data.dashboardHabits.map((h) => summarize(h.short, (date) => scoreToNum(dashboardHabitValue(data.dashboard[date], h))))
     ),
     healthBars: finish(
-      data.healthHabits.map((h) => summarize(h.short, h.target, (date) => scoreToNum(healthHabitValue(data.health[date], h))))
+      data.healthHabits.map((h) => summarize(h.short, (date) => scoreToNum(healthHabitValue(data.health[date], h))))
     ),
   };
-}
-
-// When a habit has a personal target set, color its bar green (met/exceeded)
-// or red (below) instead of the default blue — an at-a-glance status. Same
-// red used elsewhere in the app for a "0" score cell, for visual consistency.
-function targetBarColor(bar: CombinedBar, palette: { series1: string; series2: string }): string {
-  if (bar.target == null || bar.primary === null) return palette.series1;
-  return bar.primary >= bar.target ? palette.series2 : "#d03b3b";
 }
 
 export function StatsView({ year, month }: { year: number; month: number }) {
@@ -357,7 +349,6 @@ export function StatsView({ year, month }: { year: number; month: number }) {
               <Tooltip content={<ChartTooltip dark={dark} unit="%" />} cursor={{ fill: dark ? "rgba(255,255,255,0.04)" : "rgba(11,11,11,0.03)" }} />
               <Bar dataKey="primary" fill={c.series1} radius={[0, 4, 4, 0]} maxBarSize={isComparing ? 12 : 16}>
                 {isComparing && <LabelList dataKey="diffLabel" position="right" style={{ fill: c.secondary, fontSize: 11 }} />}
-                {!isComparing && dashboardChartBars.map((bar, i) => <Cell key={i} fill={targetBarColor(bar, c)} />)}
               </Bar>
               {isComparing && <Bar dataKey="compareVal" fill={c.series2} radius={[0, 4, 4, 0]} maxBarSize={12} />}
             </BarChart>
@@ -377,7 +368,6 @@ export function StatsView({ year, month }: { year: number; month: number }) {
               <Tooltip content={<ChartTooltip dark={dark} unit="%" />} cursor={{ fill: dark ? "rgba(255,255,255,0.04)" : "rgba(11,11,11,0.03)" }} />
               <Bar dataKey="primary" fill={c.series1} radius={[0, 4, 4, 0]} maxBarSize={isComparing ? 12 : 16}>
                 {isComparing && <LabelList dataKey="diffLabel" position="right" style={{ fill: c.secondary, fontSize: 11 }} />}
-                {!isComparing && healthChartBars.map((bar, i) => <Cell key={i} fill={targetBarColor(bar, c)} />)}
               </Bar>
               {isComparing && <Bar dataKey="compareVal" fill={c.series2} radius={[0, 4, 4, 0]} maxBarSize={12} />}
             </BarChart>

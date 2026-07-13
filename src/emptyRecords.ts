@@ -21,7 +21,7 @@ export function emptyDashboardDay(date: string): DashboardDay {
 }
 
 export function defaultDashboardHabits(): DashboardHabitDef[] {
-  return DASHBOARD_HABITS.map((h) => ({ id: h.key, short: h.short, builtin: true, target: null }));
+  return DASHBOARD_HABITS.map((h) => ({ id: h.key, short: h.short, builtin: true, targets: {} }));
 }
 
 export function emptyHealthDay(date: string): HealthDay {
@@ -42,7 +42,7 @@ export function emptyHealthDay(date: string): HealthDay {
 }
 
 export function defaultHealthHabits(): HealthHabitDef[] {
-  return HEALTH_HABITS.map((h) => ({ id: h.key, short: h.short, builtin: true, target: null }));
+  return HEALTH_HABITS.map((h) => ({ id: h.key, short: h.short, builtin: true, targets: {} }));
 }
 
 export function emptyCalorieDay(date: string): CalorieDay {
