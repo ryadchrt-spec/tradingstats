@@ -66,6 +66,10 @@ export type HealthKey =
 export interface CalorieDay {
   date: string; // YYYY-MM-DD
   weight: number | null; // kg
+  // Per-day activity multiplier (Mifflin-St Jeor style, e.g. 1.375) — how
+  // active this specific day was (rest day vs. a walk vs. walk + sport).
+  // Falls back to the profile's default activityMultiplier when null.
+  activityLevel: number | null;
   breakfast: number | null; // kcal — "Matin"
   lunch: number | null; // kcal — "Midi"
   dinner: number | null; // kcal — "Soir"

@@ -38,6 +38,7 @@ export function emptyCalorieDay(date: string): CalorieDay {
   return {
     date,
     weight: null,
+    activityLevel: null,
     breakfast: null,
     lunch: null,
     dinner: null,

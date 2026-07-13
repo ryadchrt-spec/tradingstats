@@ -19,15 +19,23 @@ export function hasAnyCalorieData(day: CalorieDay | undefined): boolean {
   );
 }
 
-// Mifflin-St Jeor basal metabolic rate, times an activity multiplier for TDEE
-// (Total Daily Energy Expenditure) — the calorie target for that day's weight.
-export function tdee(weightKg: number | null, profile: Profile): number | null {
+// Mifflin-St Jeor basal metabolic rate — the calories burned at total rest,
+// from weight/height/age/sex alone (no activity factored in yet).
+export function bmr(weightKg: number | null, profile: Profile): number | null {
   if (weightKg === null) return null;
-  const bmr =
-    profile.sex === "M"
-      ? 10 * weightKg + 6.25 * profile.heightCm - 5 * profile.age + 5
-      : 10 * weightKg + 6.25 * profile.heightCm - 5 * profile.age - 161;
-  return bmr * profile.activityMultiplier;
+  return profile.sex === "M"
+    ? 10 * weightKg + 6.25 * profile.heightCm - 5 * profile.age + 5
+    : 10 * weightKg + 6.25 * profile.heightCm - 5 * profile.age - 161;
+}
+
+// BMR times an activity multiplier for TDEE (Total Daily Energy Expenditure) —
+// the actual calorie target for that day's weight. Accepts an optional
+// per-day activity override (that day's CalorieDay.activityLevel); falls
+// back to the profile's default multiplier when not given.
+export function tdee(weightKg: number | null, profile: Profile, activityOverride?: number | null): number | null {
+  const base = bmr(weightKg, profile);
+  if (base === null) return null;
+  return base * (activityOverride ?? profile.activityMultiplier);
 }
 
 export function proteinTarget(weightKg: number | null, profile: Profile): number | null {
@@ -40,7 +48,7 @@ export function proteinTarget(weightKg: number | null, profile: Profile): number
 // Uses the day's locked-in goal snapshot when it has one (already filled in),
 // falling back to the profile's live goal for a day that's still empty.
 export function calorieTarget(day: CalorieDay | undefined, profile: Profile): number | null {
-  const maintenance = tdee(day?.weight ?? null, profile);
+  const maintenance = tdee(day?.weight ?? null, profile, day?.activityLevel);
   if (maintenance === null) return null;
   const goal = day?.calorieGoalAtEntry ?? profile.calorieGoal;
   return maintenance + goal;
@@ -51,7 +59,7 @@ export function calorieTarget(day: CalorieDay | undefined, profile: Profile): nu
 // this is what actually drives weight change, regardless of what was planned.
 export function calorieDeficit(day: CalorieDay | undefined, profile: Profile): number | null {
   if (!day) return null;
-  const target = tdee(day.weight, profile);
+  const target = tdee(day.weight, profile, day.activityLevel);
   const intake = totalCalories(day);
   if (target === null || intake === null) return null;
   return target - intake;
@@ -90,12 +98,12 @@ export function formatSigned(v: number | null, decimals = 0): string {
   return `${sign}${formatNum(v, decimals)}`;
 }
 
-export const ACTIVITY_LEVELS: { value: number; label: string }[] = [
-  { value: 1.2, label: "Sédentaire (peu ou pas de sport)" },
-  { value: 1.375, label: "Légèrement actif (1-3j/semaine)" },
-  { value: 1.55, label: "Modérément actif (3-5j/semaine)" },
-  { value: 1.725, label: "Très actif (6-7j/semaine)" },
-  { value: 1.9, label: "Extrêmement actif (sport intense/physique)" },
+export const ACTIVITY_LEVELS: { value: number; label: string; short: string }[] = [
+  { value: 1.2, label: "Sédentaire (peu ou pas de sport)", short: "Sédentaire" },
+  { value: 1.375, label: "Légèrement actif (1-3j/semaine)", short: "Léger" },
+  { value: 1.55, label: "Modérément actif (3-5j/semaine)", short: "Modéré" },
+  { value: 1.725, label: "Très actif (6-7j/semaine)", short: "Actif" },
+  { value: 1.9, label: "Extrêmement actif (sport intense/physique)", short: "Intense" },
 ];
 
 export const CALORIE_GOAL_PRESETS: number[] = [-750, -500, -250, 0, 250, 500];

@@ -1,7 +1,7 @@
 import { useStore } from "../store";
 import { daysInMonth, dayNameFr, toDateKey, isToday } from "../dateUtils";
 import { average } from "../compute";
-import { totalCalories, calorieTarget, calorieDeficit, proteinTarget, formatNum, formatSigned } from "../calorieCompute";
+import { totalCalories, calorieTarget, calorieDeficit, proteinTarget, tdee, formatNum, formatSigned, ACTIVITY_LEVELS } from "../calorieCompute";
 import { NumberCell } from "./NumberCell";
 import type { CalorieMealKey } from "../types";
 
@@ -21,6 +21,7 @@ export function CaloriesTable({ year, month }: { year: number; month: number }) 
   const dates = Array.from({ length: nDays }, (_, i) => toDateKey(year, month, i + 1));
 
   const monthlyWeight = average(dates.map((d) => data.calories[d]?.weight ?? null));
+  const monthlyMetabolism = average(dates.map((d) => tdee(data.calories[d]?.weight ?? null, profile, data.calories[d]?.activityLevel)));
   const monthlyTotals = average(dates.map((d) => totalCalories(data.calories[d])));
   const monthlyTarget = average(dates.map((d) => calorieTarget(data.calories[d], profile)));
   const monthlyDeficit = average(dates.map((d) => calorieDeficit(data.calories[d], profile)));
@@ -35,6 +36,7 @@ export function CaloriesTable({ year, month }: { year: number; month: number }) 
             <th className="sticky left-0 z-10 bg-slate-50 dark:bg-slate-900 px-3 py-2 text-left font-medium min-w-[110px]">Jour</th>
             <th className="px-3 py-2 text-left font-medium min-w-[60px]">Date</th>
             <th className="px-2 py-2 text-right font-medium min-w-[70px]">Poids (kg)</th>
+            <th className="px-2 py-2 text-right font-medium min-w-[110px]">Métabolisme</th>
             {MEAL_COLUMNS.map((m) => (
               <th key={m.key} className="px-2 py-2 text-right font-medium min-w-[70px]">
                 {m.label}
@@ -50,6 +52,7 @@ export function CaloriesTable({ year, month }: { year: number; month: number }) 
             <th className="sticky left-0 z-10 bg-slate-100 dark:bg-slate-800/70 px-3 py-2 text-left">Moyenne du mois</th>
             <th className="px-3 py-2"></th>
             <th className="px-2 py-2 text-right tabular-nums font-normal">{formatNum(monthlyWeight, 1)}</th>
+            <th className="px-2 py-2 text-right tabular-nums font-normal">{formatNum(monthlyMetabolism)}</th>
             <th className="px-2 py-2" colSpan={4}></th>
             <th className="px-2 py-2 text-right tabular-nums font-normal">{formatNum(monthlyTotals)}</th>
             <th className="px-2 py-2 text-right tabular-nums font-normal">{formatNum(monthlyTarget)}</th>
@@ -65,6 +68,7 @@ export function CaloriesTable({ year, month }: { year: number; month: number }) 
             const isWeekend = dName === "dimanche" || dName === "samedi";
             const cal = data.calories[date];
             const today = isToday(date);
+            const metabolism = tdee(cal?.weight ?? null, profile, cal?.activityLevel);
             const total = totalCalories(cal);
             const objectif = calorieTarget(cal, profile);
             const deficit = calorieDeficit(cal, profile);
@@ -82,6 +86,24 @@ export function CaloriesTable({ year, month }: { year: number; month: number }) 
                 <td className="px-3 py-1.5 text-slate-500 dark:text-slate-400 tabular-nums">{day}</td>
                 <td className="px-2 py-1.5">
                   <NumberCell value={cal?.weight ?? null} onChange={(v) => setCalorieValue(date, "weight", v)} step={0.1} />
+                </td>
+                <td className="px-2 py-1.5">
+                  <div className="flex flex-col items-end gap-0.5">
+                    <span className="tabular-nums text-slate-700 dark:text-slate-200 font-medium">{formatNum(metabolism)}</span>
+                    <select
+                      value={cal?.activityLevel ?? ""}
+                      onChange={(e) => setCalorieValue(date, "activityLevel", e.target.value === "" ? null : Number(e.target.value))}
+                      title="Niveau d'activité de la journée (sinon niveau du profil)"
+                      className="w-full rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-1 py-0.5 text-[10px] text-slate-500 dark:text-slate-400"
+                    >
+                      <option value="">Profil</option>
+                      {ACTIVITY_LEVELS.map((a) => (
+                        <option key={a.value} value={a.value}>
+                          {a.short}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </td>
                 {MEAL_COLUMNS.map((m) => (
                   <td key={m.key} className="px-2 py-1.5">
