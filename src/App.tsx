@@ -4,15 +4,17 @@ import { DashboardTable } from "./components/DashboardTable";
 import { HealthTable } from "./components/HealthTable";
 import { StatsView } from "./components/StatsView";
 import { CaloriesPage } from "./components/CaloriesPage";
+import { YearHeatmap } from "./components/YearHeatmap";
 import { Toolbar } from "./components/Toolbar";
 
-type Tab = "dashboard" | "health" | "calories" | "stats";
+type Tab = "dashboard" | "health" | "calories" | "stats" | "year";
 
 const TABS: { key: Tab; label: string }[] = [
   { key: "dashboard", label: "Dashboard" },
   { key: "health", label: "Health" },
   { key: "calories", label: "Calories" },
   { key: "stats", label: "Statistiques" },
+  { key: "year", label: "Année" },
 ];
 
 export default function App() {
@@ -50,7 +52,7 @@ export default function App() {
               </button>
             ))}
           </nav>
-          <MonthNav year={year} month={month} onChange={(y, m) => { setYear(y); setMonth(m); }} />
+          {tab !== "year" && <MonthNav year={year} month={month} onChange={(y, m) => { setYear(y); setMonth(m); }} />}
         </div>
 
         <main>
@@ -58,6 +60,7 @@ export default function App() {
           {tab === "health" && <HealthTable year={year} month={month} />}
           {tab === "calories" && <CaloriesPage year={year} month={month} />}
           {tab === "stats" && <StatsView year={year} month={month} />}
+          {tab === "year" && <YearHeatmap />}
         </main>
 
         <footer className="text-xs text-slate-400 dark:text-slate-600 text-center py-4">
